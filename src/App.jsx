@@ -1,9 +1,6 @@
-function App() {
-  return (
-    <div>
-      <h1>Goldstein Scheduler</h1>
-    </div>
-  );
-}
+// Goldstein Scheduler | Phase 5 | Session 1 | Build 1 | 2026-07-03 13:04 ET | app root
+import Dashboard from './pages/Dashboard.jsx';
 
-export default App;
+export default function App() {
+  return <Dashboard />;
+}
