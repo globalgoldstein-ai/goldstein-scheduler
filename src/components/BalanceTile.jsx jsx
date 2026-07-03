@@ -1,0 +1,20 @@
+// Goldstein Scheduler | Phase 5 | Session 1 | Build 1 | 2026-07-03 13:04 ET | balance tile
+export default function BalanceTile({ balance }) {
+  const even = balance.net === 0;
+  return (
+    <div style={{
+      padding: '16px 20px', borderRadius: 12, background: even ? '#eef2f7' : '#e8f5e9',
+      border: '1px solid #d7dee8', display: 'inline-block', minWidth: 200,
+    }}>
+      <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.6, color: '#667', marginBottom: 4 }}>
+        Swap Balance
+      </div>
+      <div style={{ fontSize: 24, fontWeight: 700, color: even ? '#445' : '#2e7d32' }}>
+        {balance.label}
+      </div>
+      <div style={{ fontSize: 12, color: '#778', marginTop: 4 }}>
+        A/R {balance.arDays}d · Lisa {balance.lisaDays}d
+      </div>
+    </div>
+  );
+}
