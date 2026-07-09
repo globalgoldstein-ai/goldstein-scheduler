@@ -1,4 +1,4 @@
-//  Goldstein Scheduler | Phase 5 | Session 1 | Build 1 | 2026-07-03 13:04 ET | balance tile
+// Goldstein Scheduler | Phase 5 | Session 1 | Build 1 | 2026-07-03 13:04 ET | balance tile
 export default function BalanceTile({ balance }) {
   const even = balance.net === 0;
   return (
