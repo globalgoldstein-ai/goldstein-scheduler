@@ -1,8 +1,8 @@
-// Goldstein Scheduler | Phase 9 | Session 3 | Build 2 | 2026-10-24 13:44 ET | holidays and no-school days: list or calendar, with who has Zoe
+// Goldstein Scheduler | Phase 10 | Session 3 | Build 2 | 2026-10-24 14:19 ET | holidays and no-school days: list or calendar, with who has Zoe
 import { useState } from 'react';
 import { parseDate, effectiveHousehold, householdLabel } from '../lib/schedule.js';
 import { isHolidayEvent } from '../lib/conflicts.js';
-import { categoryLabel, kidLabel } from '../lib/labels.js';
+import { categoryLabel, kidLabel, institutionStyle } from '../lib/labels.js';
 import CalendarView from './CalendarView.jsx';
 
 const DAY = 86400000;
@@ -33,10 +33,13 @@ export default function HolidaysView({ swaps = [], events = [] }) {
   const today = new Date().toLocaleDateString('en-CA');
   const [mode, setMode] = useState('list'); // list | calendar
   const [showPast, setShowPast] = useState(false);
+  const [inst, setInst] = useState('all'); // 'all' or an institution name
 
   const all = events
     .filter((e) => e.category === 'holiday' || e.category === 'school')
+    .filter((e) => inst === 'all' || e.institution === inst)
     .sort((a, b) => a.date_start.localeCompare(b.date_start) || a.title.localeCompare(b.title));
+  const institutions = [...new Set(events.map((e) => e.institution).filter(Boolean))].sort();
   const shown = showPast ? all : all.filter((e) => e.date_end >= today);
 
   const groups = [];
@@ -58,6 +61,26 @@ export default function HolidaysView({ swaps = [], events = [] }) {
         )}
       </div>
 
+      {institutions.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }} role="group" aria-label="Filter by institution">
+          {['all', ...institutions].map((i) => {
+            const st = institutionStyle(i);
+            const on = inst === i;
+            return (
+              <button key={i} onClick={() => setInst(i)} aria-pressed={on}
+                style={{
+                  padding: '4px 12px', fontSize: 12, borderRadius: 14, fontWeight: 600, cursor: 'pointer',
+                  border: `1px solid ${st ? st.edge : '#78909c'}`,
+                  background: on ? (st ? st.edge : '#78909c') : (st ? st.bg : '#fff'),
+                  color: on ? '#fff' : (st ? st.fg : '#455a64'),
+                }}>
+                {i === 'all' ? 'All' : i}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {mode === 'calendar' && <CalendarView swaps={swaps} events={all} label="Holiday calendar" />}
 
       {mode === 'list' && (
@@ -71,9 +94,11 @@ export default function HolidaysView({ swaps = [], events = [] }) {
                 const h = zoe ? holders(e, swaps) : [];
                 const swapped = zoe && swaps.some((s) => s.status === 'agreed' && s.date_start <= e.date_end && e.date_start <= s.date_end);
                 const past = e.date_end < today;
+                const ins = institutionStyle(e.institution);
                 return (
                   <div key={e.id} style={{
                     padding: '10px 12px', marginBottom: 6, border: `1px solid ${swapped ? '#80cbc4' : '#e3e8ef'}`,
+                    borderLeft: `5px solid ${ins ? ins.edge : '#cfd8dc'}`,
                     background: swapped ? '#f1faf9' : '#fff', borderRadius: 8, fontSize: 14, opacity: past ? 0.55 : 1,
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
@@ -81,6 +106,7 @@ export default function HolidaysView({ swaps = [], events = [] }) {
                       <span style={{ color: '#556', whiteSpace: 'nowrap' }}>{range(e)}</span>
                     </div>
                     <div style={{ marginTop: 4 }}>
+                      {e.institution && <span style={ins ? chip(ins.bg, ins.fg) : chip('#eceff1', '#455a64')}>{e.institution}</span>}
                       <span style={e.category === 'holiday' ? chip('#ffebee', '#c62828') : chip('#e3f2fd', '#1565c0')}>{categoryLabel(e.category)}</span>
                       {e.kid !== 'zoe' && <span style={chip('#eceff1', '#455a64')}>{kidLabel(e.kid)}</span>}
                       {swapped && <span style={chip('#e0f2f1', '#00695c')}>⇄ Holiday swap</span>}

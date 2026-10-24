@@ -1,6 +1,7 @@
--- Goldstein Scheduler | Phase 9 | Session 3 | Build 2 | 2026-10-24 14:05 ET | seed: DCPS SY26-27 and UMN 2026-27 no-school dates
+-- Goldstein Scheduler | Phase 9 | Session 3 | Build 3 | 2026-10-24 14:19 ET | seed: DCPS SY26-27 and UMN 2026-27 no-school dates
 --
--- WHERE TO RUN: Supabase dashboard > SQL Editor. Safe to re-run (skips rows that already exist).
+-- WHERE TO RUN: Supabase dashboard > SQL Editor, AFTER `alter table events add column if not exists institution text;`.
+--               Safe to re-run (skips rows that already exist and tags existing seed rows with their institution).
 -- UNDO:         delete from events where notes like 'SEED %';
 --
 -- Sources:
@@ -12,8 +13,9 @@
 -- Not included: DCPS 2027-06-21 (after the last day of school).
 -- Check before relying on: DCPS lists 2026-11-02 and 2027-04-09 as half-day records/wellness in its sidebar but no school for students in the monthly pages.
 
-insert into events (title, kid, category, date_start, date_end, status, notes)
-select v.title, v.kid, v.category, v.date_start::date, v.date_end::date, 'agreed', v.notes
+insert into events (title, kid, category, date_start, date_end, status, notes, institution)
+select v.title, v.kid, v.category, v.date_start::date, v.date_end::date, 'agreed', v.notes,
+       case when v.notes like 'SEED DCPS%' then 'DCPS' else 'UMN' end
 from (values
   -- DCPS (Zoe): holidays and breaks
   ('Labor Day',                 'zoe',  'holiday', '2026-09-07', '2026-09-07', 'SEED DCPS SY26-27'),
@@ -49,3 +51,7 @@ where not exists (
   select 1 from events e
   where e.title = v.title and e.kid = v.kid and e.date_start = v.date_start::date
 );
+
+-- Tag seed rows that were loaded before the institution column existed.
+update events set institution = 'DCPS' where notes like 'SEED DCPS%' and institution is null;
+update events set institution = 'UMN'  where notes like 'SEED UMN%'  and institution is null;

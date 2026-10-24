@@ -6,7 +6,7 @@ app: Goldstein Scheduler
 repo: globalgoldstein-ai/goldstein-scheduler
 live: https://goldstein-scheduler.netlify.app
 ---
-<!-- Goldstein Scheduler | Phase 10 | Session 3 | Build 1 | 2026-10-24 14:13 ET | REQUIREMENTS.md: current deployed state -->
+<!-- Goldstein Scheduler | Phase 10 | Session 3 | Build 2 | 2026-10-24 14:19 ET | REQUIREMENTS.md: current deployed state -->
 
 # Goldstein Kids Scheduler — REQUIREMENTS.md
 
@@ -46,7 +46,7 @@ Shared custody and event tracker for two households. Zoe alternates weeks betwee
 - Receiving household is derived from the start date, never typed. Creating a swap for a household that already holds Zoe that week is rejected.
 - Swaps are created as `proposed`. Statuses: `proposed | agreed | needs_discussion`.
 - A **trade** is two swaps sharing `swaps.trade_id` (nullable `uuid`; null for a one-sided swap). The return side goes to the household that gave days up and must fall on days the other household holds by default. Balance nets automatically when the day counts match.
-- Events carry a `category` (`holiday | school | trip | other`) that drives holiday-swap detection (stored values never change; `school` is displayed as "No school"), and a `kid` (`zoe | noah | both`).
+- Events carry an optional `institution` (nullable text, `DCPS` or `UMN` today; null for family events). It is a label and filter only and never affects detection. Events also carry a `category` (`holiday | school | trip | other`) that drives holiday-swap detection (stored values never change; `school` is displayed as "No school"), and a `kid` (`zoe | noah | both`).
 - `audit_log` is append-only, enforced by the database (insert + select policies only). Every create and status change writes one row with before/after JSON. An audit failure never rolls back the write it logs.
 - RLS is on with permissive anon policies. There is no login.
 
@@ -58,7 +58,7 @@ Shared custody and event tracker for two households. Zoe alternates weeks betwee
 - **"I am" selector** — Aaron / Rebecca / Lisa. Self-declared, not verified. It sets the audit actor and the draft sender.
 - **+ Swap / + Event forms** — create records, each audited.
 - **Mark agreed** — one click by any actor, on swaps and events. Audited.
-- **Holidays view** — every `holiday` and `school` event as a **List** (grouped by month, upcoming first, "Show past" toggle; shows who has Zoe, Noah's events tagged, holiday swaps highlighted) or a **Calendar** of only those events.
+- **Holidays view** — every `holiday` and `school` event, with an **institution** chip, a left-edge color (DCPS gold, UMN maroon) and **All / DCPS / UMN** filter pills that apply to both views, as a **List** (grouped by month, upcoming first, "Show past" toggle; shows who has Zoe, Noah's events tagged, holiday swaps highlighted) or a **Calendar** of only those events.
 - **Trades** — each one-sided swap has **Add the other side (trade)**. The form suggests a same-length return window (`suggestReturn`, §6), editable, and creates the return swap as `proposed`. A trade shows as one card with **Mark both agreed**. Linking the original swap is audited.
 - **Holiday swaps list** — one card per agreed swap that lands on a holiday or no-school day, naming the events it covers. Event status is ignored.
 - **Propose different dates** — optional button on each holiday-swap card (§6).

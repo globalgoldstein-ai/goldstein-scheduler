@@ -1,11 +1,11 @@
-// Goldstein Scheduler | Phase 9 | Session 3 | Build 2 | 2026-10-24 13:44 ET | event form (holiday / no school / trip)
+// Goldstein Scheduler | Phase 9 | Session 3 | Build 3 | 2026-10-24 14:19 ET | event form (holiday / no school / trip, with institution)
 import { useState } from 'react';
 import { createEvent } from '../lib/mutations.js';
 
 const box = { width: '100%', padding: 10, fontSize: 16, borderRadius: 8, border: '1px solid #ccd', marginBottom: 10, boxSizing: 'border-box' };
 
 export default function EventForm({ actor, onDone }) {
-  const [f, setF] = useState({ title: '', kid: 'zoe', category: 'holiday', date_start: '', date_end: '', notes: '' });
+  const [f, setF] = useState({ title: '', kid: 'zoe', category: 'holiday', institution: '', date_start: '', date_end: '', notes: '' });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
 
@@ -19,7 +19,7 @@ export default function EventForm({ actor, onDone }) {
     const { error } = await createEvent({ ...f, status: 'proposed' }, actor);
     setBusy(false);
     if (error) return setErr(error.message);
-    setF({ title: '', kid: 'zoe', category: 'holiday', date_start: '', date_end: '', notes: '' });
+    setF({ title: '', kid: 'zoe', category: 'holiday', institution: '', date_start: '', date_end: '', notes: '' });
     onDone();
   }
 
@@ -35,6 +35,13 @@ export default function EventForm({ actor, onDone }) {
         <option value="school">No school</option>
         <option value="trip">Trip</option>
         <option value="other">Other</option>
+      </select>
+
+      <label style={{ fontSize: 12, color: '#667' }}>School / institution (optional)</label>
+      <select value={f.institution} onChange={set('institution')} style={box}>
+        <option value="">None</option>
+        <option value="DCPS">DCPS</option>
+        <option value="UMN">UMN</option>
       </select>
 
       <label style={{ fontSize: 12, color: '#667' }}>Kid</label>

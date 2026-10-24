@@ -1,8 +1,9 @@
--- Goldstein Scheduler | Phase 10 | Session 3 | Build 1 | 2026-10-24 14:13 ET | schema + RLS (swaps.trade_id added)
+-- Goldstein Scheduler | Phase 10 | Session 3 | Build 2 | 2026-10-24 14:19 ET | schema + RLS (swaps.trade_id, events.institution added)
 --
 -- EXISTING DATABASE: run this once in the Supabase SQL Editor before deploying the trade UI:
 --   alter table swaps add column if not exists trade_id uuid;
 --   create index if not exists swaps_trade_id_idx on swaps (trade_id);
+--   alter table events add column if not exists institution text;
 
 -- SWAPS — deltas over the default schedule. Owned by the receiving household.
 create table swaps (
@@ -31,6 +32,7 @@ create table events (
   date_end date not null,
   status text not null default 'proposed' check (status in ('proposed','agreed','needs_discussion')),
   notes text,
+  institution text,  -- optional school or institution tag (DCPS, UMN); null for family events
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   check (date_end >= date_start)

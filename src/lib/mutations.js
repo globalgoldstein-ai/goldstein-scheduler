@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 10 | Session 3 | Build 1 | 2026-10-24 14:13 ET | write layer: swaps + events + trades, each audited
+// Goldstein Scheduler | Phase 10 | Session 3 | Build 2 | 2026-10-24 14:19 ET | write layer: swaps + events (with institution) + trades, each audited
 
 import { supabase } from '../supabaseClient.js';
 import { logAudit } from './audit.js';
@@ -20,10 +20,10 @@ export async function createSwap({ date_start, date_end, receiving_parent, statu
   return { data, error: null };
 }
 
-export async function createEvent({ title, kid, category, date_start, date_end, status, notes }, actor) {
+export async function createEvent({ title, kid, category, date_start, date_end, status, notes, institution = null }, actor) {
   const { data, error } = await supabase
     .from('events')
-    .insert({ title, kid, category, date_start, date_end, status, notes })
+    .insert({ title, kid, category, date_start, date_end, status, notes, institution: institution || null })
     .select().single();
   if (error) return { data: null, error };
   await logAudit({ actor, action: 'create', entityType: 'event', entityId: data.id, after: data });

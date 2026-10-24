@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 9 | Session 3 | Build 2 | 2026-10-24 13:44 ET | calendar: month grid colored by household, holiday swaps marked
+// Goldstein Scheduler | Phase 10 | Session 3 | Build 2 | 2026-10-24 14:19 ET | calendar: month grid colored by household, holiday swaps marked
 import { useState } from 'react';
 import { parseDate, effectiveHousehold, householdLabel } from '../lib/schedule.js';
 import { isHolidayEvent } from '../lib/conflicts.js';
@@ -123,7 +123,7 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
           {sInfo.dayEvents.map((e) => (
             <div key={e.id} style={{ fontSize: 13, color: '#556', marginTop: 4 }}>
               <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 4, background: CAT[e.category] ?? CAT.other, marginRight: 6 }} />
-              {e.title} ({categoryLabel(e.category)}{e.kid === 'zoe' ? '' : `, ${e.kid}`}), {short(e.date_start)}–{short(e.date_end)}{e.status === 'agreed' ? '' : ` · ${e.status}`}
+              {e.title} ({categoryLabel(e.category)}{e.institution ? `, ${e.institution}` : ''}{e.kid === 'zoe' ? '' : `, ${e.kid}`}), {short(e.date_start)}–{short(e.date_end)}{e.status === 'agreed' ? '' : ` · ${e.status}`}
             </div>
           ))}
           {sInfo.holidaySwap && <div style={{ marginTop: 6, color: HOLSWAP, fontSize: 13 }}>⇄ Holiday swap: an agreed swap covers a holiday or no-school day.</div>}
