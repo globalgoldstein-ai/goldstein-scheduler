@@ -1,83 +1,119 @@
-<!-- Goldstein Kids Scheduler | Spec v1 | 2026-07-03 11:51 ET (Friday) | initial requirements -->
+---
+type: app
+status: active
+updated: 2026-10-24
+app: Goldstein Scheduler
+repo: globalgoldstein-ai/goldstein-scheduler
+live: https://goldstein-scheduler.netlify.app
+---
+<!-- Goldstein Scheduler | Phase 7 | Session 3 | Build 1 | 2026-10-24 11:56 ET | REQUIREMENTS.md: current deployed state -->
 
 # Goldstein Kids Scheduler — REQUIREMENTS.md
 
-## Purpose
-Shared custody + event scheduler for two households co-parenting Noah (college, occasional) and Zoe (alternating weeks). Replaces the localStorage-only single-file prototype with a shared, multi-user app.
+**Current deployed state, not a changelog.** Describes what `main` does today (as of commit `558a88b`). History lives in git. The database schema is defined in `supabase/schema.sql`; this file records only the rules that schema cannot express.
 
-## Households (not individual parents)
+## 1. Purpose
+
+Shared custody and event tracker for two households. Zoe alternates weeks between them; swaps move days between households; Noah (college) appears occasionally. **Core thesis: custody is computed from rules, never typed, and conflicts are detected automatically.**
+
 - **Aaron/Rebecca** — one household (Mount Pleasant)
 - **Lisa** — one household (NoMa DC)
-- Approvals are per-household: an agreed swap needs both households.
 
-## Default schedule
-- Aaron/Rebecca: odd ISO weeks
-- Lisa: even ISO weeks
-- Week-assignment change applies only after an effective date (never rewrites past).
+## 2. Stack and deploy
 
-## Core model: default + swaps
-Zoe is at the default household unless a swap says otherwise. Swaps are first-class records, not inferred from event titles.
+| Layer | Choice |
+|---|---|
+| Frontend | React 18 + Vite 5, inline styles, single page (`Dashboard`) |
+| Database | Supabase (Postgres + RLS), project `goldstein-scheduler` |
+| Server code | One Netlify Function: `netlify/functions/draft-message.js` |
+| AI | Claude Sonnet (`claude-sonnet-4-6`), server-side only |
+| Source of truth | GitHub `globalgoldstein-ai/goldstein-scheduler`, branch `main` |
+| Production | Netlify auto-deploy from `main` → goldstein-scheduler.netlify.app |
+| Build/edit | Claude Code on Windows. Replit is retired. |
 
-### swaps
-```
-id, date_start, date_end,
-receiving_parent,        -- household getting Zoe (owns the swap)
-default_parent,          -- snapshotted at creation, never back-rewritten
-status,                  -- proposed | agreed | needs_discussion
-proposed_by,             -- who initiated
-notes,                   -- links, texts, approval docs
-created_at, updated_at
-```
-Swap "belongs to" the **receiving** household. Balance = sum of swap-days each direction.
+## 3. Schedule rules (`src/lib/schedule.js`)
 
-### events (holidays, trips, one-offs)
-```
-id, title, kid,          -- both | noah | zoe
-date_start, date_end,
-status, notes, created_at, updated_at
-```
+- Default holder: Aaron/Rebecca on **odd ISO weeks**, Lisa on **even**.
+- Rules are effective-dated. To change parity, **append** a rule with a later `from` — never edit history.
+- Effective holder = default, unless an **agreed** swap covers the date.
+- Swap balance counts **agreed** swaps only, in days, per receiving household.
 
-### audit_log (change log)
-```
-id, timestamp, actor, action,   -- create | edit | delete
-entity_type, entity_id, before, after
-```
-Append-only. Every create/edit/delete writes one row. Used for "who changed what" and recovery.
+## 4. Data invariants
 
-## Display rules
-- Calendar: color by household (Aaron/Rebecca vs Lisa), swap days visibly marked.
-- Swap notation: `Lisa → Aaron/Rebecca (3 days)` = A/R receiving during Lisa's default week.
-- List + detail views show the same arrow.
-- Running balance tile: who's ahead / "Even".
+- A swap belongs to the **receiving** household. `default_parent` is snapshotted at creation and never rewritten.
+- Receiving household is derived from the start date, never typed. Creating a swap for a household that already holds Zoe that week is rejected.
+- Swaps are created as `proposed`. Statuses: `proposed | agreed | needs_discussion`.
+- Events carry a `category` (`holiday | school | trip | other`) that drives conflict detection, and a `kid` (`zoe | noah | both`).
+- `audit_log` is append-only, enforced by the database (insert + select policies only). Every create and status change writes one row with before/after JSON. An audit failure never rolls back the write it logs.
+- RLS is on with permissive anon policies. There is no login.
 
-## Auth
-None at launch. Access via hard-to-guess shared URL slug. Row-level security scaffolded in Supabase for later opt-in auth. Do not build login now.
+## 5. What the app does today
 
-## Conflicts
-Last-write-wins. No locking. Change log provides recovery. (Three trusted adults, low edit rate.)
+- **Balance tile** — who is ahead, or "Even".
+- **"I am" selector** — Aaron / Rebecca / Lisa. Self-declared, not verified. It sets the audit actor and the draft sender.
+- **+ Swap / + Event forms** — create records, each audited.
+- **Mark agreed** — one click by any actor, on swaps and events. Audited.
+- **Conflict list** — every **agreed** swap overlapping a `holiday` or `school` event. Event status is ignored.
+- **Draft message** — on each amber conflict card (§6).
+- **Lists** — all swaps and all events with status.
 
-## Stack
-- Frontend: React + Vite (complexity justifies it — shared state, multiple views)
-- Backend: **Supabase** (new project under Aaron's account, not Bolt's)
-- Deploy: GitHub `globalgoldstein-ai/goldstein-scheduler` → Netlify auto-deploy from main
-- Replit: one-time scaffold only
+## 6. Conflict → Draft message
 
-## Constraints (from protocol)
-- `dist/` in `.gitignore` at scaffold time
-- Any Anthropic API calls (future) via Netlify Functions, env `ANTHROPIC_API_KEY` (no VITE_ prefix)
-- File headers: `// Goldstein Scheduler | Phase N | Session N | Build N | YYYY-MM-DD HH:MM ET | description`
-- All code changes through GitHub web UI after scaffold; never edit in Replit again
+1. `suggestAlternate(swap, event)` (`src/lib/suggest.js`) computes an alternate window. **Deterministic — not AI. Do not replace with a model call.** It keeps the swap length, tries before the event then after, and only accepts a window whose both ends fall in weeks where the swap's `default_parent` is unchanged. Returns `null` if none.
+2. `Dashboard.jsx` POSTs `{ sender, alternate, conflict }` to `/.netlify/functions/draft-message`, where `conflict` is `{ swapStart, swapEnd, eventTitle, eventCategory, eventStart, eventEnd }`.
+3. The function asks Claude for a text under 320 characters, using only the supplied dates, proposing the alternate and inviting a counter. With a `null` alternate it asks to discuss. Returns `{ text }`; on failure `{ error }` with status 502 or 500.
+4. The card shows a loading state, an error state, the draft with **Copy**, and **Redraft**. Code fences are stripped from the response.
+5. **Drafting is read-only and writes no audit row.**
 
-## Out of scope (v1)
-- Login/auth
-- School-calendar auto-fetch (DCPS/UMN)
-- Push/SMS notifications
-- Noah's full scheduling (occasional events only for now)
+`ConflictCard` is declared at module scope on purpose: defined inside `Dashboard()`, it would remount every render and wipe the draft.
 
-## Phase plan
-1. **Scaffold** — Replit: Vite+React, folder structure, Supabase client, `.gitignore` w/ dist → push to GitHub
-2. **Data layer** — Supabase tables + RLS-ready schema; wire client
-3. **Read views** — calendar + list pulling live data
-4. **Write flows** — add/edit swaps & events, status changes, audit writes
-5. **Balance + audit UI** — swap totals, change-log view
-6. **Vibe check** — share link to all three, iterate
+## 7. Configuration
+
+| Variable | Set in | Visible to browser | Purpose |
+|---|---|---|---|
+| `VITE_SUPABASE_URL` | Netlify (build) and `.env.local` | Yes, by design | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Netlify (build) and `.env.local` | Yes, by design | Supabase anon key |
+| `ANTHROPIC_API_KEY` | Netlify (Functions) | **No — never** | Claude API. No `VITE_` prefix. |
+
+Netlify reads env vars at build time: after changing any variable, run **Deploys → Trigger deploy → Clear cache and deploy site**. There is no `netlify.toml`.
+
+## 8. Operations
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Page shows `Error: TypeError: Failed to fetch` | Free-tier Supabase project paused after ~7 days idle. The project hostname returns DNS NXDOMAIN. | Supabase dashboard → **Restore project**; wait a few minutes. This project stays resumable until 2027-08-24. |
+| Draft button: `invalid x-api-key` | `ANTHROPIC_API_KEY` missing or stale in Netlify | Create a key in the Anthropic Console, set it in Netlify, redeploy with cache cleared |
+| Draft button: other error | Read the message in the card; a bad `model` string looks like a key error | Check `draft-message.js` |
+
+`ERR_BLOCKED_BY_CLIENT` lines in the browser console are unrelated tracker blocking, not a Supabase fault.
+
+## 9. Not built
+
+Original spec items that do not exist yet:
+
+- Calendar view (lists only)
+- Audit log viewer (rows are fetched but not displayed)
+- Edit and delete flows (create and mark-agreed only)
+- Setting `needs_discussion` from the UI
+- Per-household approval — one click by anyone marks a record agreed
+- Hard-to-guess URL slug — the site is on its plain Netlify address
+- Auth. Out of scope until deliberately started.
+- School-calendar auto-fetch, push/SMS notifications, full Noah scheduling
+
+## 10. Known limitations and open decisions
+
+- **`suggestAlternate` returns `null` for most full-week swaps.** Measured over a year of synthetic swaps: 0% for 1–3 days, 28% for 4 days, **98% for 7 days**. Weekly rotation means a 7-day window rarely sits inside one parity week. The rule works as written; the constraint may be too strict. **Decide before relaxing it.**
+- **Drafts always address Lisa.** The function prompt says "my co-parent Lisa" regardless of sender, so a draft generated with "I am: Lisa" is addressed to herself.
+- **Anyone with the URL can read and write.** Permissive anon RLS plus a public site, until auth lands.
+- Free-tier Supabase will pause again after idle weeks. Upgrade, or add a scheduled keep-alive.
+
+## 11. Conventions
+
+- File header, first line of every source file: `// Goldstein Scheduler | Phase N | Session N | Build N | YYYY-MM-DD HH:MM ET | description`
+- Markdown docs: YAML frontmatter first (`type`, `status`, `updated`), then the same header as an HTML comment.
+- Diffs, not rewrites, when editing. `dist/` is never committed.
+- Do not touch schema, RLS, schedule parity logic, or the append-only audit constraint without an explicit decision.
+
+## 12. Last verified
+
+**2026-10-24, live.** With a test swap (Nov 25–27) and holiday (Nov 26–27), **Draft message** returned text whose dates matched `suggestAlternate` exactly (alternate Nov 23–25).
