@@ -6,7 +6,7 @@ app: Goldstein Scheduler
 repo: globalgoldstein-ai/goldstein-scheduler
 live: https://goldstein-scheduler.netlify.app
 ---
-<!-- Goldstein Scheduler | Phase 9 | Session 3 | Build 4 | 2026-10-24 14:05 ET | REQUIREMENTS.md: current deployed state -->
+<!-- Goldstein Scheduler | Phase 10 | Session 3 | Build 1 | 2026-10-24 14:13 ET | REQUIREMENTS.md: current deployed state -->
 
 # Goldstein Kids Scheduler — REQUIREMENTS.md
 
@@ -45,6 +45,7 @@ Shared custody and event tracker for two households. Zoe alternates weeks betwee
 - A swap belongs to the **receiving** household. `default_parent` is snapshotted at creation and never rewritten.
 - Receiving household is derived from the start date, never typed. Creating a swap for a household that already holds Zoe that week is rejected.
 - Swaps are created as `proposed`. Statuses: `proposed | agreed | needs_discussion`.
+- A **trade** is two swaps sharing `swaps.trade_id` (nullable `uuid`; null for a one-sided swap). The return side goes to the household that gave days up and must fall on days the other household holds by default. Balance nets automatically when the day counts match.
 - Events carry a `category` (`holiday | school | trip | other`) that drives holiday-swap detection (stored values never change; `school` is displayed as "No school"), and a `kid` (`zoe | noah | both`).
 - `audit_log` is append-only, enforced by the database (insert + select policies only). Every create and status change writes one row with before/after JSON. An audit failure never rolls back the write it logs.
 - RLS is on with permissive anon policies. There is no login.
@@ -58,6 +59,7 @@ Shared custody and event tracker for two households. Zoe alternates weeks betwee
 - **+ Swap / + Event forms** — create records, each audited.
 - **Mark agreed** — one click by any actor, on swaps and events. Audited.
 - **Holidays view** — every `holiday` and `school` event as a **List** (grouped by month, upcoming first, "Show past" toggle; shows who has Zoe, Noah's events tagged, holiday swaps highlighted) or a **Calendar** of only those events.
+- **Trades** — each one-sided swap has **Add the other side (trade)**. The form suggests a same-length return window (`suggestReturn`, §6), editable, and creates the return swap as `proposed`. A trade shows as one card with **Mark both agreed**. Linking the original swap is audited.
 - **Holiday swaps list** — one card per agreed swap that lands on a holiday or no-school day, naming the events it covers. Event status is ignored.
 - **Propose different dates** — optional button on each holiday-swap card (§6).
 - **Lists** — all swaps and all events with status.
@@ -73,6 +75,8 @@ Shared custody and event tracker for two households. Zoe alternates weeks betwee
 3. The function asks Claude for a text under 320 characters, addressed to the other household (Lisa, or Aaron and Rebecca when the sender is Lisa), using only the supplied dates, proposing the alternate and inviting a counter. With a `null` alternate it asks to discuss. Returns `{ text }`; on failure `{ error }` with status 502 or 500.
 4. The card shows a loading state, an error state, the draft with **Copy**, and **Redraft**. Code fences are stripped from the response.
 5. **Drafting is read-only and writes no audit row.**
+
+`suggestReturn(swap, ctx)` (same file) suggests the return side of a trade: same length, shifted by whole weeks (later before earlier, nearest first, up to 8 weeks), with every day held by default by the household that received the swap, skipping holidays, no-school days, other agreed swaps and past dates. Both suggestion functions ignore Noah-only events. Deterministic, not AI.
 
 `ConflictCard` is declared at module scope on purpose: defined inside `Dashboard()`, it would remount every render and wipe the draft.
 

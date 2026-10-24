@@ -1,4 +1,8 @@
--- Goldstein Scheduler | Phase 2 | Session 1 | Build 1 | 2026-07-03 12:22 ET | schema + RLS
+-- Goldstein Scheduler | Phase 10 | Session 3 | Build 1 | 2026-10-24 14:13 ET | schema + RLS (swaps.trade_id added)
+--
+-- EXISTING DATABASE: run this once in the Supabase SQL Editor before deploying the trade UI:
+--   alter table swaps add column if not exists trade_id uuid;
+--   create index if not exists swaps_trade_id_idx on swaps (trade_id);
 
 -- SWAPS — deltas over the default schedule. Owned by the receiving household.
 create table swaps (
@@ -10,6 +14,7 @@ create table swaps (
   status text not null default 'proposed' check (status in ('proposed','agreed','needs_discussion')),
   proposed_by text not null check (proposed_by in ('aaron','rebecca','lisa')),
   notes text,
+  trade_id uuid,  -- links the two sides of a trade; null for a one-sided swap
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   check (date_end >= date_start),

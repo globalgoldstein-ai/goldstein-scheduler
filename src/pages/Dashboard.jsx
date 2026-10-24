@@ -1,16 +1,18 @@
-// Goldstein Scheduler | Phase 9 | Session 3 | Build 2 | 2026-10-24 13:44 ET | dashboard: balance + holiday tally + schedule/holidays views + holiday swaps + write UI + draft button
+// Goldstein Scheduler | Phase 10 | Session 3 | Build 1 | 2026-10-24 14:13 ET | dashboard: balance + holiday tally + schedule/holidays views + holiday swaps + trades + write UI + draft button
 import { useState } from 'react';
 import { useData } from '../hooks/useData.js';
 import { swapBalance, householdLabel } from '../lib/schedule.js';
 import { holidayTally, trackingSince } from '../lib/tally.js';
 import { categoryLabel, kidLabel } from '../lib/labels.js';
 import { suggestAlternate } from '../lib/suggest.js';
-import { updateStatus } from '../lib/mutations.js';
+import { updateStatus, updateTradeStatus } from '../lib/mutations.js';
+import { groupSwaps } from '../lib/trades.js';
 import BalanceTile from '../components/BalanceTile.jsx';
 import CalendarView from '../components/CalendarView.jsx';
 import HolidaysView from '../components/HolidaysView.jsx';
 import SwapForm from '../components/SwapForm.jsx';
 import EventForm from '../components/EventForm.jsx';
+import TradeForm from '../components/TradeForm.jsx';
 
 const ACTORS = ['aaron', 'rebecca', 'lisa'];
 
@@ -128,6 +130,7 @@ export default function Dashboard() {
   const [actor, setActor] = useState('aaron');
   const [tab, setTab] = useState(null); // 'swap' | 'event' | null
   const [view, setView] = useState('schedule'); // 'schedule' | 'holidays'
+  const [tradeFor, setTradeFor] = useState(null); // swap id with the trade form open
 
   if (loading) return <p style={{ padding: 24 }}>Loading…</p>;
   if (error) return <p style={{ padding: 24, color: '#c00' }}>Error: {error}</p>;
@@ -140,6 +143,17 @@ export default function Dashboard() {
     await updateStatus(table, row, 'agreed', actor);
     refetch();
   };
+
+  const agreeTrade = async (rows) => {
+    await updateTradeStatus(rows, 'agreed', actor);
+    refetch();
+  };
+
+  const nice = (s) => {
+    const [y, m, d] = s.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+  };
+  const span = (r) => (r.date_start === r.date_end ? nice(r.date_start) : `${nice(r.date_start)} – ${nice(r.date_end)}`);
 
   const Row = ({ row, table, label }) => (
     <div style={{ padding: 12, marginBottom: 8, border: '1px solid #e3e8ef', borderRadius: 8, fontSize: 14 }}>
@@ -210,10 +224,45 @@ export default function Dashboard() {
       )}
 
       <h2 style={{ fontSize: 16, margin: '24px 0 8px' }}>Swaps ({swaps.length})</h2>
-      {swaps.map((s) => (
-        <Row key={s.id} row={s} table="swaps"
-          label={`${householdLabel(s.default_parent)} → ${householdLabel(s.receiving_parent)}`} />
-      ))}
+      {groupSwaps(swaps).map((g) => {
+        if (g.rows.length === 1) {
+          const s = g.rows[0];
+          return (
+            <div key={g.key}>
+              <Row row={s} table="swaps"
+                label={`${householdLabel(s.default_parent)} → ${householdLabel(s.receiving_parent)}`} />
+              {s.status !== 'needs_discussion' && tradeFor !== s.id && (
+                <button onClick={() => setTradeFor(s.id)}
+                  style={{ margin: '-2px 0 10px', padding: '6px 12px', fontSize: 13, borderRadius: 6, border: '1px solid #00695c', background: '#fff', color: '#00695c', fontWeight: 600 }}>
+                  ⇄ Add the other side (trade)
+                </button>
+              )}
+              {tradeFor === s.id && (
+                <TradeForm swap={s} swaps={swaps} events={events} actor={actor}
+                  onCancel={() => setTradeFor(null)}
+                  onDone={() => { setTradeFor(null); refetch(); }} />
+              )}
+            </div>
+          );
+        }
+        const pending = g.rows.some((r) => r.status !== 'agreed');
+        return (
+          <div key={g.key} style={{ padding: 12, marginBottom: 8, border: '1px solid #80cbc4', background: '#f1faf9', borderRadius: 8, fontSize: 14 }}>
+            <div style={{ fontWeight: 700, marginBottom: 4 }}>⇄ Trade</div>
+            {g.rows.map((r) => (
+              <div key={r.id} style={{ marginBottom: 4 }}>
+                {householdLabel(r.receiving_parent)} gets {span(r)} · <strong>{r.status}</strong>
+              </div>
+            ))}
+            {pending && (
+              <button onClick={() => agreeTrade(g.rows)}
+                style={{ marginTop: 6, padding: '6px 12px', fontSize: 13, borderRadius: 6, border: '1px solid #2e7d32', background: '#fff', color: '#2e7d32', fontWeight: 600 }}>
+                Mark both agreed
+              </button>
+            )}
+          </div>
+        );
+      })}
 
       <h2 style={{ fontSize: 16, margin: '24px 0 8px' }}>Events ({events.length})</h2>
       {events.map((e) => (
