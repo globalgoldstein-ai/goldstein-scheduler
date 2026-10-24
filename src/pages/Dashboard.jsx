@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 7 | Session 2 | Build 1 | 2026-08-23 22:12 ET | dashboard: balance + conflicts + write UI + draft button
+// Goldstein Scheduler | Phase 8 | Session 3 | Build 1 | 2026-10-24 13:03 ET | dashboard: balance + conflicts + write UI + draft button
 import { useState } from 'react';
 import { useData } from '../hooks/useData.js';
 import { swapBalance, householdLabel } from '../lib/schedule.js';
@@ -20,7 +20,7 @@ function stripFences(s = '') {
 
 // Defined at MODULE scope on purpose: a component declared inside Dashboard()
 // is a new type on every render, which would remount and wipe draft state.
-function ConflictCard({ conflict, sender }) {
+function ConflictCard({ conflict, sender, swaps, events }) {
   const { swap, event } = conflict;
   const [state, setState] = useState('idle'); // idle | loading | done | error
   const [draft, setDraft] = useState('');
@@ -33,7 +33,8 @@ function ConflictCard({ conflict, sender }) {
     setCopied(false);
     try {
       // Deterministic — this is the factual content the model must not invent.
-      const alternate = suggestAlternate(swap, event);
+      const today = new Date().toLocaleDateString('en-CA'); // local YYYY-MM-DD
+      const alternate = suggestAlternate(swap, event, { swaps, events, today });
 
       const res = await fetch('/.netlify/functions/draft-message', {
         method: 'POST',
@@ -185,7 +186,7 @@ export default function Dashboard() {
         <p style={{ color: '#778' }}>No holiday or school collisions. ✓</p>
       ) : (
         conflicts.map((c) => (
-          <ConflictCard key={`${c.swap.id}:${c.event.id}`} conflict={c} sender={actor} />
+          <ConflictCard key={`${c.swap.id}:${c.event.id}`} conflict={c} sender={actor} swaps={swaps} events={events} />
         ))
       )}
 

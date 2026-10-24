@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 7 | Session 1 | Build 1 | 2026-07-13 00:48 ET | alternate-window suggestion (deterministic)
+// Goldstein Scheduler | Phase 8 | Session 3 | Build 1 | 2026-10-24 13:03 ET | alternate-window suggestion (deterministic)
 
 import { parseDate, defaultHousehold } from './schedule.js';
 
@@ -8,24 +8,58 @@ const shift = (dateStr, days) => iso(new Date(parseDate(dateStr).getTime() + day
 const overlaps = (aS, aE, bS, bE) => parseDate(aS) <= parseDate(bE) && parseDate(bS) <= parseDate(aE);
 
 // Propose an alternate window for a swap that collides with an event.
-// Preserves swap length. Tries BEFORE the event, then AFTER. Must land in a
-// week where the same household is still the receiving side (i.e. the default
-// parent is unchanged) — otherwise the swap stops meaning the same thing.
-export function suggestAlternate(swap, event) {
+// Pure and deterministic: no clock, no model. Preserves swap length and the
+// default parent, so the swap still means the same thing.
+//
+//   ctx = { swaps, events, today }  (all optional)
+//   - swaps/events: other records the new window must not collide with
+//   - today: 'YYYY-MM-DD'; windows starting before it are skipped
+//
+// 1) Nearest window right BEFORE the event, then right AFTER. Both ends must
+//    fall in weeks where the swap's default parent is unchanged.
+// 2) Otherwise the same window moved by whole 2-week steps (earlier first,
+//    nearest first, up to MAX_WEEKS). A 14-day step keeps every day's default
+//    household, so no parity check is needed. This is what makes full-week
+//    swaps work.
+// Returns null when nothing fits: humans need to talk.
+const MAX_WEEKS = 6;
+
+export function suggestAlternate(swap, event, ctx = {}) {
+  const { swaps = [], events = [], today = null } = ctx;
   const len = Math.round((parseDate(swap.date_end) - parseDate(swap.date_start)) / DAY);
 
-  const candidates = [
+  const blockers = [
+    { s: event.date_start, e: event.date_end },
+    ...events
+      .filter((x) => x.category === 'holiday' || x.category === 'school')
+      .map((x) => ({ s: x.date_start, e: x.date_end })),
+    ...swaps
+      .filter((x) => x.status === 'agreed' && x.id !== swap.id)
+      .map((x) => ({ s: x.date_start, e: x.date_end })),
+  ];
+
+  const free = (c) =>
+    (!today || c.date_start >= today) &&
+    !blockers.some((b) => overlaps(c.date_start, c.date_end, b.s, b.e));
+
+  const sameHolder = (c) =>
+    defaultHousehold(c.date_start) === swap.default_parent &&
+    defaultHousehold(c.date_end) === swap.default_parent;
+
+  const near = [
     // end the day before the event starts
     { date_start: shift(event.date_start, -1 - len), date_end: shift(event.date_start, -1) },
     // start the day after the event ends
     { date_start: shift(event.date_end, 1), date_end: shift(event.date_end, 1 + len) },
   ];
+  for (const c of near) if (free(c) && sameHolder(c)) return c;
 
-  for (const c of candidates) {
-    if (overlaps(c.date_start, c.date_end, event.date_start, event.date_end)) continue;
-    if (defaultHousehold(c.date_start) !== swap.default_parent) continue;
-    if (defaultHousehold(c.date_end) !== swap.default_parent) continue;
-    return c;
+  for (let k = 1; k <= Math.ceil(MAX_WEEKS / 2); k++) {
+    for (const dir of [-1, 1]) {
+      const d = dir * 14 * k;
+      const c = { date_start: shift(swap.date_start, d), date_end: shift(swap.date_end, d) };
+      if (free(c)) return c;
+    }
   }
-  return null; // no clean window — humans need to talk
+  return null;
 }
