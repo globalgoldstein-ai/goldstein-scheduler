@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 8 | Session 3 | Build 1 | 2026-10-24 13:03 ET | dashboard: balance + conflicts + write UI + draft button
+// Goldstein Scheduler | Phase 9 | Session 3 | Build 1 | 2026-10-24 13:24 ET | dashboard: balance + calendar + conflicts + write UI + draft button
 import { useState } from 'react';
 import { useData } from '../hooks/useData.js';
 import { swapBalance, householdLabel } from '../lib/schedule.js';
@@ -6,6 +6,7 @@ import { detectConflicts } from '../lib/conflicts.js';
 import { suggestAlternate } from '../lib/suggest.js';
 import { updateStatus } from '../lib/mutations.js';
 import BalanceTile from '../components/BalanceTile.jsx';
+import CalendarView from '../components/CalendarView.jsx';
 import SwapForm from '../components/SwapForm.jsx';
 import EventForm from '../components/EventForm.jsx';
 
@@ -164,6 +165,8 @@ export default function Dashboard() {
       </div>
 
       <BalanceTile balance={balance} />
+
+      <CalendarView swaps={swaps} events={events} />
 
       <div style={{ display: 'flex', gap: 8, margin: '20px 0 16px' }}>
         <button onClick={() => setTab(tab === 'swap' ? null : 'swap')}

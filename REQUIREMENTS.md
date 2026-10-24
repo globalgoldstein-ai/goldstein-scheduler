@@ -6,7 +6,7 @@ app: Goldstein Scheduler
 repo: globalgoldstein-ai/goldstein-scheduler
 live: https://goldstein-scheduler.netlify.app
 ---
-<!-- Goldstein Scheduler | Phase 8 | Session 3 | Build 2 | 2026-10-24 13:17 ET | REQUIREMENTS.md: current deployed state -->
+<!-- Goldstein Scheduler | Phase 9 | Session 3 | Build 1 | 2026-10-24 13:25 ET | REQUIREMENTS.md: current deployed state -->
 
 # Goldstein Kids Scheduler — REQUIREMENTS.md
 
@@ -50,6 +50,7 @@ Shared custody and event tracker for two households. Zoe alternates weeks betwee
 ## 5. What the app does today
 
 - **Balance tile** — who is ahead, or "Even".
+- **Calendar** — month grid, Monday-first so custody weeks line up. Days are tinted by the household that has Zoe (default schedule plus agreed swaps). ⇄ marks agreed swap days, a dashed outline marks proposed swap days, an amber outline marks conflict days, and dots show events by category. Tap a day for details. Read-only.
 - **"I am" selector** — Aaron / Rebecca / Lisa. Self-declared, not verified. It sets the audit actor and the draft sender.
 - **+ Swap / + Event forms** — create records, each audited.
 - **Mark agreed** — one click by any actor, on swaps and events. Audited.
@@ -97,7 +98,6 @@ Netlify reads env vars at build time: after changing any variable, run **Deploys
 
 Original spec items that do not exist yet:
 
-- Calendar view (lists only)
 - Audit log viewer (rows are fetched but not displayed)
 - Edit and delete flows (create and mark-agreed only)
 - Setting `needs_discussion` from the UI
