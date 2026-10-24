@@ -6,7 +6,7 @@ app: Goldstein Scheduler
 repo: globalgoldstein-ai/goldstein-scheduler
 live: https://goldstein-scheduler.netlify.app
 ---
-<!-- Goldstein Scheduler | Phase 9 | Session 3 | Build 3 | 2026-10-24 13:50 ET | REQUIREMENTS.md: current deployed state -->
+<!-- Goldstein Scheduler | Phase 9 | Session 3 | Build 4 | 2026-10-24 14:05 ET | REQUIREMENTS.md: current deployed state -->
 
 # Goldstein Kids Scheduler — REQUIREMENTS.md
 
@@ -113,7 +113,7 @@ Original spec items that do not exist yet:
 ## 10. Known limitations and open decisions
 
 - **Anyone with the URL can read and write.** Permissive anon RLS plus a public site, until auth lands.
-- **Seed gaps:** UMN spring break 2027 is not seeded (no published date found). DCPS 2026-11-02 and 2027-04-09 are listed as half days in the district sidebar but no school in its monthly pages; they are seeded as no school.
+- **Seed gaps:** UMN dates (Thanksgiving Nov 23–27, spring break Mar 8–12) came from pasted UMN One Stop calendar text, not the registrar page itself; recheck if it matters. DCPS 2026-11-02 and 2027-04-09 are listed as half days in the district sidebar but no school in its monthly pages; they are seeded as no school.
 - **Tallies are only as complete as the swap history entered.** Swaps before the "since" date are not counted.
 
 ## 11. Conventions
@@ -127,4 +127,4 @@ Working rules for Claude Code (file headers, diffs, do-not-touch list) live in `
 - **Keep-alive:** a manual run from Netlify logged `Supabase responded 200`.
 - **Full-week swap:** a Mon–Sun swap (Nov 23–29) colliding with a holiday (Nov 26–27) produced a draft proposing Nov 9–15, the window `suggestAlternate` computes (14 days earlier, same default household).
 - **Calendar, Holidays view and seed (live):** the test rows were removed and `supabase/seed-2026-27.sql` loaded 25 events with no duplicates. The Holidays list renders with "Zoe with …" for each Zoe event, and Noah's UMN events show tagged "Noah". With zero swaps both tiles read "Even … no agreed swaps yet".
-- **Not yet verified live:** the Holiday swap tally and holiday-swap cards with real swaps. They were tested locally with sample swaps, including a swap on a Noah-only break that was correctly not counted.
+- **Holiday swap tally (live):** an agreed swap Dec 26–27, 2026 produced Swap balance "Aaron/Rebecca +2" and Holiday swaps "Aaron/Rebecca +1", both "since Dec 26, 2026", and one card naming Winter Break. A swap on a Noah-only break was tested locally and correctly not counted.
