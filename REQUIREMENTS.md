@@ -6,7 +6,7 @@ app: Goldstein Scheduler
 repo: globalgoldstein-ai/goldstein-scheduler
 live: https://goldstein-scheduler.netlify.app
 ---
-<!-- Goldstein Scheduler | Phase 9 | Session 3 | Build 2 | 2026-10-24 13:44 ET | REQUIREMENTS.md: current deployed state -->
+<!-- Goldstein Scheduler | Phase 9 | Session 3 | Build 3 | 2026-10-24 13:50 ET | REQUIREMENTS.md: current deployed state -->
 
 # Goldstein Kids Scheduler — REQUIREMENTS.md
 
@@ -126,3 +126,5 @@ Working rules for Claude Code (file headers, diffs, do-not-touch list) live in `
 - **Draft message:** with a test swap (Nov 25–27) and holiday (Nov 26–27), the draft's dates matched `suggestAlternate` exactly (alternate Nov 23–25). Called as Aaron it is addressed to Lisa; as Lisa, to the other household.
 - **Keep-alive:** a manual run from Netlify logged `Supabase responded 200`.
 - **Full-week swap:** a Mon–Sun swap (Nov 23–29) colliding with a holiday (Nov 26–27) produced a draft proposing Nov 9–15, the window `suggestAlternate` computes (14 days earlier, same default household).
+- **Calendar, Holidays view and seed (live):** the test rows were removed and `supabase/seed-2026-27.sql` loaded 25 events with no duplicates. The Holidays list renders with "Zoe with …" for each Zoe event, and Noah's UMN events show tagged "Noah". With zero swaps both tiles read "Even … no agreed swaps yet".
+- **Not yet verified live:** the Holiday swap tally and holiday-swap cards with real swaps. They were tested locally with sample swaps, including a swap on a Noah-only break that was correctly not counted.
