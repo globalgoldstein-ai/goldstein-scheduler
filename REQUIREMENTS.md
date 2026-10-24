@@ -6,7 +6,7 @@ app: Goldstein Scheduler
 repo: globalgoldstein-ai/goldstein-scheduler
 live: https://goldstein-scheduler.netlify.app
 ---
-<!-- Goldstein Scheduler | Phase 7 | Session 3 | Build 1 | 2026-10-24 11:56 ET | REQUIREMENTS.md: current deployed state -->
+<!-- Goldstein Scheduler | Phase 7 | Session 3 | Build 2 | 2026-10-24 12:19 ET | REQUIREMENTS.md: current deployed state -->
 
 # Goldstein Kids Scheduler — REQUIREMENTS.md
 
@@ -109,9 +109,7 @@ Original spec items that do not exist yet:
 
 ## 11. Conventions
 
-- File header, first line of every source file: `// Goldstein Scheduler | Phase N | Session N | Build N | YYYY-MM-DD HH:MM ET | description`
-- Markdown docs: YAML frontmatter first (`type`, `status`, `updated`), then the same header as an HTML comment.
-- Diffs, not rewrites, when editing. `dist/` is never committed.
+- File headers, diffs over rewrites and `dist/` handling follow the app-building protocol and are not repeated here. Markdown docs carry YAML frontmatter (`type`, `status`, `updated`).
 - Do not touch schema, RLS, schedule parity logic, or the append-only audit constraint without an explicit decision.
 
 ## 12. Last verified
