@@ -1,12 +1,14 @@
-// Goldstein Scheduler | Phase 9 | Session 3 | Build 1 | 2026-10-24 13:24 ET | dashboard: balance + calendar + conflicts + write UI + draft button
+// Goldstein Scheduler | Phase 9 | Session 3 | Build 2 | 2026-10-24 13:44 ET | dashboard: balance + holiday tally + schedule/holidays views + holiday swaps + write UI + draft button
 import { useState } from 'react';
 import { useData } from '../hooks/useData.js';
 import { swapBalance, householdLabel } from '../lib/schedule.js';
-import { detectConflicts } from '../lib/conflicts.js';
+import { holidayTally, trackingSince } from '../lib/tally.js';
+import { categoryLabel, kidLabel } from '../lib/labels.js';
 import { suggestAlternate } from '../lib/suggest.js';
 import { updateStatus } from '../lib/mutations.js';
 import BalanceTile from '../components/BalanceTile.jsx';
 import CalendarView from '../components/CalendarView.jsx';
+import HolidaysView from '../components/HolidaysView.jsx';
 import SwapForm from '../components/SwapForm.jsx';
 import EventForm from '../components/EventForm.jsx';
 
@@ -85,20 +87,20 @@ function ConflictCard({ conflict, sender, swaps, events }) {
   };
 
   return (
-    <div style={{ padding: 12, marginBottom: 8, borderRadius: 8, background: '#fff4e5', border: '1px solid #ffcc80', fontSize: 14 }}>
-      <div>⚠️ {conflict.message}</div>
+    <div style={{ padding: 12, marginBottom: 8, borderRadius: 8, background: '#f1faf9', border: '1px solid #80cbc4', fontSize: 14 }}>
+      <div>⇄ {conflict.message}</div>
 
       <button
         onClick={draftMessage}
         disabled={state === 'loading'}
         style={{
           marginTop: 10, padding: '6px 12px', fontSize: 13, borderRadius: 6,
-          border: '1px solid #b26a00', background: '#fff', color: '#b26a00',
+          border: '1px solid #00695c', background: '#fff', color: '#00695c',
           fontWeight: 600, cursor: state === 'loading' ? 'default' : 'pointer',
           opacity: state === 'loading' ? 0.6 : 1,
         }}
       >
-        {state === 'loading' ? 'Drafting…' : state === 'done' ? 'Redraft' : 'Draft message'}
+        {state === 'loading' ? 'Drafting…' : state === 'done' ? 'Redraft' : 'Propose different dates'}
       </button>
 
       {state === 'error' && (
@@ -106,7 +108,7 @@ function ConflictCard({ conflict, sender, swaps, events }) {
       )}
 
       {state === 'done' && (
-        <div style={{ marginTop: 10, padding: 10, background: '#fff', border: '1px solid #ffcc80', borderRadius: 6 }}>
+        <div style={{ marginTop: 10, padding: 10, background: '#fff', border: '1px solid #80cbc4', borderRadius: 6 }}>
           <div style={{ whiteSpace: 'pre-wrap', fontSize: 14, lineHeight: 1.45 }}>{draft}</div>
           <button
             onClick={copy}
@@ -125,12 +127,14 @@ export default function Dashboard() {
   const { swaps, events, loading, error, refetch } = useData();
   const [actor, setActor] = useState('aaron');
   const [tab, setTab] = useState(null); // 'swap' | 'event' | null
+  const [view, setView] = useState('schedule'); // 'schedule' | 'holidays'
 
   if (loading) return <p style={{ padding: 24 }}>Loading…</p>;
   if (error) return <p style={{ padding: 24, color: '#c00' }}>Error: {error}</p>;
 
   const balance = swapBalance(swaps);
-  const conflicts = detectConflicts(swaps, events);
+  const holiday = holidayTally(swaps, events);
+  const since = trackingSince(swaps);
 
   const agree = async (table, row) => {
     await updateStatus(table, row, 'agreed', actor);
@@ -164,9 +168,21 @@ export default function Dashboard() {
         </select>
       </div>
 
-      <BalanceTile balance={balance} />
+      <BalanceTile balance={balance} holiday={holiday} since={since} />
 
-      <CalendarView swaps={swaps} events={events} />
+      <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+        {[['schedule', 'Schedule'], ['holidays', 'Holidays']].map(([k, label]) => (
+          <button key={k} onClick={() => setView(k)} aria-pressed={view === k}
+            style={{ padding: '8px 16px', fontSize: 14, borderRadius: 8, fontWeight: 600, cursor: 'pointer',
+              border: '1px solid #263238', background: view === k ? '#263238' : '#fff', color: view === k ? '#fff' : '#263238' }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {view === 'schedule'
+        ? <CalendarView swaps={swaps} events={events} />
+        : <HolidaysView swaps={swaps} events={events} />}
 
       <div style={{ display: 'flex', gap: 8, margin: '20px 0 16px' }}>
         <button onClick={() => setTab(tab === 'swap' ? null : 'swap')}
@@ -183,13 +199,13 @@ export default function Dashboard() {
       {tab === 'event' && <EventForm actor={actor} onDone={() => { setTab(null); refetch(); }} />}
 
       <h2 style={{ fontSize: 16, margin: '24px 0 8px' }}>
-        Conflicts {conflicts.length > 0 && `(${conflicts.length})`}
+        Holiday swaps {holiday.items.length > 0 && `(${holiday.items.length})`}
       </h2>
-      {conflicts.length === 0 ? (
-        <p style={{ color: '#778' }}>No holiday or school collisions. ✓</p>
+      {holiday.items.length === 0 ? (
+        <p style={{ color: '#778' }}>No agreed swaps land on a holiday or no-school day.</p>
       ) : (
-        conflicts.map((c) => (
-          <ConflictCard key={`${c.swap.id}:${c.event.id}`} conflict={c} sender={actor} swaps={swaps} events={events} />
+        holiday.items.map((c) => (
+          <ConflictCard key={c.swap.id} conflict={c} sender={actor} swaps={swaps} events={events} />
         ))
       )}
 
@@ -201,7 +217,7 @@ export default function Dashboard() {
 
       <h2 style={{ fontSize: 16, margin: '24px 0 8px' }}>Events ({events.length})</h2>
       {events.map((e) => (
-        <Row key={e.id} row={e} table="events" label={`${e.title} (${e.category})`} />
+        <Row key={e.id} row={e} table="events" label={`${e.title} (${categoryLabel(e.category)}${e.kid === 'zoe' ? '' : `, ${kidLabel(e.kid)}`})`} />
       ))}
     </div>
   );

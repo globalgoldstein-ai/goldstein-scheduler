@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 6 | Session 1 | Build 1 | 2026-07-03 13:52 ET | event form (holiday/school/trip)
+// Goldstein Scheduler | Phase 9 | Session 3 | Build 2 | 2026-10-24 13:44 ET | event form (holiday / no school / trip)
 import { useState } from 'react';
 import { createEvent } from '../lib/mutations.js';
 
@@ -32,7 +32,7 @@ export default function EventForm({ actor, onDone }) {
       <label style={{ fontSize: 12, color: '#667' }}>Category</label>
       <select value={f.category} onChange={set('category')} style={box}>
         <option value="holiday">Holiday</option>
-        <option value="school">School</option>
+        <option value="school">No school</option>
         <option value="trip">Trip</option>
         <option value="other">Other</option>
       </select>

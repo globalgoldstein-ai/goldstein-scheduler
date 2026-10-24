@@ -1,6 +1,8 @@
-// Goldstein Scheduler | Phase 9 | Session 3 | Build 1 | 2026-10-24 13:24 ET | calendar: month grid colored by household
+// Goldstein Scheduler | Phase 9 | Session 3 | Build 2 | 2026-10-24 13:44 ET | calendar: month grid colored by household, holiday swaps marked
 import { useState } from 'react';
 import { parseDate, effectiveHousehold, householdLabel } from '../lib/schedule.js';
+import { isHolidayEvent } from '../lib/conflicts.js';
+import { categoryLabel } from '../lib/labels.js';
 
 const iso = (d) => d.toISOString().slice(0, 10);
 const addDays = (s, n) => iso(new Date(parseDate(s).getTime() + n * 86400000));
@@ -15,7 +17,7 @@ const HOUSE = {
   lisa: { bg: '#f3e5f5', edge: '#7b1fa2' },
 };
 const CAT = { holiday: '#c62828', school: '#1565c0', trip: '#ef6c00', other: '#78909c' };
-const AMBER = '#ffb74d';
+const HOLSWAP = '#00897b'; // holiday swaps are normal, so a calm teal instead of a warning color
 
 // Whole weeks (Mon-first) covering the month, as YYYY-MM-DD strings.
 function monthGrid(y, m) {
@@ -28,7 +30,7 @@ function monthGrid(y, m) {
 
 const navBtn = { padding: '6px 12px', fontSize: 14, borderRadius: 8, border: '1px solid #ccd', background: '#fff', color: '#334', fontWeight: 600 };
 
-export default function CalendarView({ swaps = [], events = [] }) {
+export default function CalendarView({ swaps = [], events = [], label = 'Calendar' }) {
   const today = new Date().toLocaleDateString('en-CA'); // local YYYY-MM-DD
   const [ym, setYm] = useState(() => { const [y, m] = today.split('-').map(Number); return { y, m: m - 1 }; });
   const [sel, setSel] = useState(null);
@@ -47,7 +49,7 @@ export default function CalendarView({ swaps = [], events = [] }) {
     return {
       dayEvents, daySwaps, agreedSwap,
       holder: effectiveHousehold(d, swaps),
-      conflict: agreedSwap && dayEvents.some((e) => e.category === 'holiday' || e.category === 'school'),
+      holidaySwap: agreedSwap && dayEvents.some(isHolidayEvent),
     };
   };
 
@@ -56,7 +58,7 @@ export default function CalendarView({ swaps = [], events = [] }) {
   const sInfo = sel ? info(sel) : null;
 
   return (
-    <div style={{ marginTop: 20 }}>
+    <div style={{ marginTop: 20 }} role="group" aria-label={label}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <button onClick={() => step(-1)} style={navBtn} aria-label="Previous month">‹</button>
         <div style={{ flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 700 }}>{title}</div>
@@ -69,7 +71,7 @@ export default function CalendarView({ swaps = [], events = [] }) {
           <div key={n} style={{ textAlign: 'center', fontSize: 11, color: '#778', padding: '2px 0' }}>{n}</div>
         ))}
         {days.map((d) => {
-          const { dayEvents, daySwaps, agreedSwap, holder, conflict } = info(d);
+          const { dayEvents, daySwaps, agreedSwap, holder, holidaySwap } = info(d);
           const inMonth = Number(d.slice(5, 7)) - 1 === ym.m;
           const proposedOnly = !agreedSwap && daySwaps.length > 0;
           const ring = d === sel ? '0 0 0 2px #1565c0' : d === today ? '0 0 0 2px #263238' : 'none';
@@ -77,12 +79,12 @@ export default function CalendarView({ swaps = [], events = [] }) {
             <button
               key={d}
               onClick={() => setSel(sel === d ? null : d)}
-              aria-label={`${fmt(d)}, with ${householdLabel(holder)}${agreedSwap ? ', swap' : ''}${conflict ? ', conflict' : ''}`}
+              aria-label={`${fmt(d)}, with ${householdLabel(holder)}${agreedSwap ? ', swap' : ''}${holidaySwap ? ', holiday swap' : ''}`}
               aria-pressed={d === sel}
               style={{
                 position: 'relative', minHeight: 52, padding: '4px 2px', borderRadius: 6, cursor: 'pointer',
                 background: HOUSE[holder]?.bg ?? '#eef2f7',
-                border: conflict ? `2px solid ${AMBER}` : proposedOnly ? `1px dashed ${HOUSE[holder]?.edge ?? '#889'}` : '1px solid #e3e8ef',
+                border: holidaySwap ? `2px solid ${HOLSWAP}` : proposedOnly ? `1px dashed ${HOUSE[holder]?.edge ?? '#889'}` : '1px solid #e3e8ef',
                 boxShadow: ring, opacity: inMonth ? 1 : 0.4, color: '#223', font: 'inherit',
               }}
             >
@@ -103,9 +105,9 @@ export default function CalendarView({ swaps = [], events = [] }) {
           <span key={k}><span style={{ display: 'inline-block', width: 10, height: 10, background: v.bg, border: `1px solid ${v.edge}`, borderRadius: 2, marginRight: 4 }} />{householdLabel(k)}</span>
         ))}
         <span>⇄ agreed swap</span>
-        <span><span style={{ display: 'inline-block', width: 10, height: 10, border: `2px solid ${AMBER}`, borderRadius: 2, marginRight: 4 }} />conflict</span>
+        <span><span style={{ display: 'inline-block', width: 10, height: 10, border: `2px solid ${HOLSWAP}`, borderRadius: 2, marginRight: 4 }} />holiday swap</span>
         {Object.entries(CAT).map(([k, c]) => (
-          <span key={k}><span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: 3, background: c, marginRight: 4 }} />{k}</span>
+          <span key={k}><span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: 3, background: c, marginRight: 4 }} />{categoryLabel(k)}</span>
         ))}
       </div>
 
@@ -121,10 +123,10 @@ export default function CalendarView({ swaps = [], events = [] }) {
           {sInfo.dayEvents.map((e) => (
             <div key={e.id} style={{ fontSize: 13, color: '#556', marginTop: 4 }}>
               <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 4, background: CAT[e.category] ?? CAT.other, marginRight: 6 }} />
-              {e.title} ({e.category}), {short(e.date_start)}–{short(e.date_end)} · {e.status}
+              {e.title} ({categoryLabel(e.category)}{e.kid === 'zoe' ? '' : `, ${e.kid}`}), {short(e.date_start)}–{short(e.date_end)}{e.status === 'agreed' ? '' : ` · ${e.status}`}
             </div>
           ))}
-          {sInfo.conflict && <div style={{ marginTop: 6, color: '#b26a00', fontSize: 13 }}>⚠️ Agreed swap overlaps a holiday or school event. See Conflicts below.</div>}
+          {sInfo.holidaySwap && <div style={{ marginTop: 6, color: HOLSWAP, fontSize: 13 }}>⇄ Holiday swap: an agreed swap covers a holiday or no-school day.</div>}
           {!sInfo.daySwaps.length && !sInfo.dayEvents.length && <div style={{ fontSize: 13, color: '#889', marginTop: 4 }}>Nothing else scheduled.</div>}
         </div>
       )}

@@ -1,6 +1,7 @@
-// Goldstein Scheduler | Phase 3 | Session 1 | Build 1 | 2026-07-03 12:41 ET | conflict detection
+// Goldstein Scheduler | Phase 9 | Session 3 | Build 2 | 2026-10-24 13:44 ET | holiday swap detection (was: conflict detection)
 
 import { parseDate, householdLabel } from './schedule.js';
+import { categoryLabel } from './labels.js';
 
 const inclusiveDays = (start, end) =>
   Math.round((parseDate(end) - parseDate(start)) / 86400000) + 1;
@@ -16,10 +17,17 @@ function overlapDays(swap, ev) {
   return inclusiveDays(start, end);
 }
 
-// Flag every AGREED swap overlapping a holiday or school event.
+// A holiday or no-school day that can affect Zoe's custody. Noah's own
+// (college) breaks are shown in the app but never count toward Zoe's swaps.
+export const isHolidayEvent = (e) =>
+  (e.category === 'holiday' || e.category === 'school') && e.kid !== 'noah';
+
+// Every AGREED swap overlapping a holiday or no-school day.
+// Swapping on holidays is normal, so these are information, not errors.
 // Returns [{ swap, event, overlapDays, message }] — feed straight to the UI.
+// (Function name kept from Phase 3 to keep the diff small.)
 export function detectConflicts(swaps = [], events = []) {
-  const flagged = events.filter((e) => e.category === 'holiday' || e.category === 'school');
+  const flagged = events.filter(isHolidayEvent);
   const out = [];
   for (const swap of swaps) {
     if (swap.status !== 'agreed') continue;
@@ -30,8 +38,8 @@ export function detectConflicts(swaps = [], events = []) {
           event: ev,
           overlapDays: overlapDays(swap, ev),
           message:
-            `Agreed swap to ${householdLabel(swap.receiving_parent)} ` +
-            `(${swap.date_start}–${swap.date_end}) overlaps ${ev.category} "${ev.title}" ` +
+            `${householdLabel(swap.receiving_parent)} has Zoe ${swap.date_start}–${swap.date_end}, ` +
+            `covering ${categoryLabel(ev.category).toLowerCase()} "${ev.title}" ` +
             `(${ev.date_start}–${ev.date_end}).`,
         });
       }

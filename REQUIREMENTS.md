@@ -6,7 +6,7 @@ app: Goldstein Scheduler
 repo: globalgoldstein-ai/goldstein-scheduler
 live: https://goldstein-scheduler.netlify.app
 ---
-<!-- Goldstein Scheduler | Phase 9 | Session 3 | Build 1 | 2026-10-24 13:25 ET | REQUIREMENTS.md: current deployed state -->
+<!-- Goldstein Scheduler | Phase 9 | Session 3 | Build 2 | 2026-10-24 13:44 ET | REQUIREMENTS.md: current deployed state -->
 
 # Goldstein Kids Scheduler — REQUIREMENTS.md
 
@@ -14,7 +14,7 @@ live: https://goldstein-scheduler.netlify.app
 
 ## 1. Purpose
 
-Shared custody and event tracker for two households. Zoe alternates weeks between them; swaps move days between households; Noah (college) appears occasionally. **Core thesis: custody is computed from rules, never typed, and conflicts are detected automatically.**
+Shared custody and event tracker for two households. Zoe alternates weeks between them; swaps move days between households; Noah (college) appears occasionally. **Core thesis: custody is computed from rules, never typed, and holiday swaps are detected automatically.**
 
 - **Aaron/Rebecca** — one household (Mount Pleasant)
 - **Lisa** — one household (NoMa DC)
@@ -37,28 +37,32 @@ Shared custody and event tracker for two households. Zoe alternates weeks betwee
 - Rules are effective-dated. To change parity, **append** a rule with a later `from` — never edit history.
 - Effective holder = default, unless an **agreed** swap covers the date.
 - Swap balance counts **agreed** swaps only, in days, per receiving household.
+- **Holiday swap** = an agreed swap overlapping a `holiday` or `school` (shown as "No school") event that applies to Zoe (`kid` is `zoe` or `both`; `noah`-only events never count). Swapping on holidays is normal, so this is information, not an error. Each swap counts once.
+- Running totals start at the earliest agreed swap and are labeled "since <date>", because history before the app is not recorded.
 
 ## 4. Data invariants
 
 - A swap belongs to the **receiving** household. `default_parent` is snapshotted at creation and never rewritten.
 - Receiving household is derived from the start date, never typed. Creating a swap for a household that already holds Zoe that week is rejected.
 - Swaps are created as `proposed`. Statuses: `proposed | agreed | needs_discussion`.
-- Events carry a `category` (`holiday | school | trip | other`) that drives conflict detection, and a `kid` (`zoe | noah | both`).
+- Events carry a `category` (`holiday | school | trip | other`) that drives holiday-swap detection (stored values never change; `school` is displayed as "No school"), and a `kid` (`zoe | noah | both`).
 - `audit_log` is append-only, enforced by the database (insert + select policies only). Every create and status change writes one row with before/after JSON. An audit failure never rolls back the write it logs.
 - RLS is on with permissive anon policies. There is no login.
 
 ## 5. What the app does today
 
-- **Balance tile** — who is ahead, or "Even".
-- **Calendar** — month grid, Monday-first so custody weeks line up. Days are tinted by the household that has Zoe (default schedule plus agreed swaps). ⇄ marks agreed swap days, a dashed outline marks proposed swap days, an amber outline marks conflict days, and dots show events by category. Tap a day for details. Read-only.
+- **Tiles** — two, each labeled "since <date>": **Swap balance (days)** (who is ahead, or "Even") and **Holiday swaps** (count per household and who is ahead).
+- **Schedule | Holidays switch** under the tiles.
+- **Calendar (Schedule)** — month grid, Monday-first so custody weeks line up. Days are tinted by the household that has Zoe (default schedule plus agreed swaps). ⇄ marks agreed swap days, a dashed outline marks proposed swap days, a teal outline marks holiday-swap days, and dots show events by category. Tap a day for details. Read-only.
 - **"I am" selector** — Aaron / Rebecca / Lisa. Self-declared, not verified. It sets the audit actor and the draft sender.
 - **+ Swap / + Event forms** — create records, each audited.
 - **Mark agreed** — one click by any actor, on swaps and events. Audited.
-- **Conflict list** — every **agreed** swap overlapping a `holiday` or `school` event. Event status is ignored.
-- **Draft message** — on each amber conflict card (§6).
+- **Holidays view** — every `holiday` and `school` event as a **List** (grouped by month, upcoming first, "Show past" toggle; shows who has Zoe, Noah's events tagged, holiday swaps highlighted) or a **Calendar** of only those events.
+- **Holiday swaps list** — one card per agreed swap that lands on a holiday or no-school day, naming the events it covers. Event status is ignored.
+- **Propose different dates** — optional button on each holiday-swap card (§6).
 - **Lists** — all swaps and all events with status.
 
-## 6. Conflict → Draft message
+## 6. Holiday swap → Propose different dates (draft message)
 
 1. `suggestAlternate(swap, event, ctx)` (`src/lib/suggest.js`) computes an alternate window. **Deterministic — not AI. Do not replace with a model call.** It keeps the swap length and the swap's `default_parent`:
    - First it tries the window right before the event, then right after, accepting one only if both ends fall in weeks where `default_parent` is unchanged.
@@ -104,11 +108,13 @@ Original spec items that do not exist yet:
 - Per-household approval — one click by anyone marks a record agreed
 - Hard-to-guess URL slug — the site is on its plain Netlify address
 - Auth. Out of scope until deliberately started.
-- School-calendar auto-fetch, push/SMS notifications, full Noah scheduling
+- School-calendar auto-fetch (2026-27 dates were loaded once with `supabase/seed-2026-27.sql`), push/SMS notifications, full Noah scheduling
 
 ## 10. Known limitations and open decisions
 
 - **Anyone with the URL can read and write.** Permissive anon RLS plus a public site, until auth lands.
+- **Seed gaps:** UMN spring break 2027 is not seeded (no published date found). DCPS 2026-11-02 and 2027-04-09 are listed as half days in the district sidebar but no school in its monthly pages; they are seeded as no school.
+- **Tallies are only as complete as the swap history entered.** Swaps before the "since" date are not counted.
 
 ## 11. Conventions
 
