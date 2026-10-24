@@ -6,7 +6,7 @@ app: Goldstein Scheduler
 repo: globalgoldstein-ai/goldstein-scheduler
 live: https://goldstein-scheduler.netlify.app
 ---
-<!-- Goldstein Scheduler | Phase 8 | Session 3 | Build 1 | 2026-10-24 13:03 ET | REQUIREMENTS.md: current deployed state -->
+<!-- Goldstein Scheduler | Phase 8 | Session 3 | Build 2 | 2026-10-24 13:17 ET | REQUIREMENTS.md: current deployed state -->
 
 # Goldstein Kids Scheduler — REQUIREMENTS.md
 
@@ -119,3 +119,4 @@ Working rules for Claude Code (file headers, diffs, do-not-touch list) live in `
 **2026-10-24, live.**
 - **Draft message:** with a test swap (Nov 25–27) and holiday (Nov 26–27), the draft's dates matched `suggestAlternate` exactly (alternate Nov 23–25). Called as Aaron it is addressed to Lisa; as Lisa, to the other household.
 - **Keep-alive:** a manual run from Netlify logged `Supabase responded 200`.
+- **Full-week swap:** a Mon–Sun swap (Nov 23–29) colliding with a holiday (Nov 26–27) produced a draft proposing Nov 9–15, the window `suggestAlternate` computes (14 days earlier, same default household).
