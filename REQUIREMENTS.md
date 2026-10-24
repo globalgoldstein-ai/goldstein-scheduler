@@ -6,7 +6,7 @@ app: Goldstein Scheduler
 repo: globalgoldstein-ai/goldstein-scheduler
 live: https://goldstein-scheduler.netlify.app
 ---
-<!-- Goldstein Scheduler | Phase 7 | Session 3 | Build 4 | 2026-10-24 12:47 ET | REQUIREMENTS.md: current deployed state -->
+<!-- Goldstein Scheduler | Phase 7 | Session 3 | Build 5 | 2026-10-24 12:52 ET | REQUIREMENTS.md: current deployed state -->
 
 # Goldstein Kids Scheduler — REQUIREMENTS.md
 
@@ -25,7 +25,7 @@ Shared custody and event tracker for two households. Zoe alternates weeks betwee
 |---|---|
 | Frontend | React 18 + Vite 5, inline styles, single page (`Dashboard`) |
 | Database | Supabase (Postgres + RLS), project `goldstein-scheduler` |
-| Server code | One Netlify Function: `netlify/functions/draft-message.js` |
+| Server code | Netlify Functions in `netlify/functions/`: `draft-message.js` (HTTP) and `keep-alive.js` (scheduled daily) |
 | AI | Claude Sonnet (`claude-sonnet-4-6`), server-side only |
 | Source of truth | GitHub `globalgoldstein-ai/goldstein-scheduler`, branch `main` |
 | Production | Netlify auto-deploy from `main` → goldstein-scheduler.netlify.app |
@@ -75,7 +75,7 @@ Shared custody and event tracker for two households. Zoe alternates weeks betwee
 | `VITE_SUPABASE_ANON_KEY` | Netlify (build) and `.env.local` | Yes, by design | Supabase anon key |
 | `ANTHROPIC_API_KEY` | Netlify (Functions) | **No — never** | Claude API. No `VITE_` prefix. |
 
-Netlify reads env vars at build time: after changing any variable, run **Deploys → Trigger deploy → Clear cache and deploy site**. There is no `netlify.toml`.
+Netlify reads env vars at build time: after changing any variable, run **Deploys → Trigger deploy → Clear cache and deploy site**. `keep-alive.js` reads the two `VITE_SUPABASE_*` variables at runtime, so they must also be available to Functions. There is no `netlify.toml`.
 
 ## 8. Operations
 
@@ -84,6 +84,8 @@ Netlify reads env vars at build time: after changing any variable, run **Deploys
 | Page shows `Error: TypeError: Failed to fetch` | Free-tier Supabase project paused after ~7 days idle. The project hostname returns DNS NXDOMAIN. | Supabase dashboard → **Restore project**; wait a few minutes. This project stays resumable until 2027-08-24. |
 | Draft button: `invalid x-api-key` | `ANTHROPIC_API_KEY` missing or stale in Netlify | Create a key in the Anthropic Console, set it in Netlify, redeploy with cache cleared |
 | Draft button: other error | Read the message in the card; a bad `model` string looks like a key error | Check `draft-message.js` |
+
+**Pause prevention:** `keep-alive.js` runs daily at 00:00 UTC and reads one row (read-only, no audit row). Check Netlify → Functions → keep-alive → logs for `Supabase responded 200`. If it logs an error or stops running, the project pauses after about 7 idle days.
 
 `ERR_BLOCKED_BY_CLIENT` lines in the browser console are unrelated tracker blocking, not a Supabase fault.
 
@@ -104,7 +106,6 @@ Original spec items that do not exist yet:
 
 - **`suggestAlternate` returns `null` for most full-week swaps.** Measured over a year of synthetic swaps: 0% for 1–3 days, 28% for 4 days, **98% for 7 days**. Weekly rotation means a 7-day window rarely sits inside one parity week. The rule works as written; the constraint may be too strict. **Decide before relaxing it.**
 - **Anyone with the URL can read and write.** Permissive anon RLS plus a public site, until auth lands.
-- Free-tier Supabase will pause again after idle weeks. Upgrade, or add a scheduled keep-alive.
 
 ## 11. Conventions
 
