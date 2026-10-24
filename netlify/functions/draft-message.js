@@ -1,10 +1,12 @@
-// Goldstein Scheduler | Phase 7 | Session 1 | Build 1 | 2026-07-13 00:48 ET | Netlify Function: draft co-parent message
+// Goldstein Scheduler | Phase 7 | Session 3 | Build 1 | 2026-10-24 12:47 ET | Netlify Function: draft co-parent message (recipient follows sender)
 
 export async function handler(event) {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
 
   try {
     const { conflict, alternate, sender } = JSON.parse(event.body);
+    // Lisa is her own household; anyone else writes to her.
+    const recipient = sender === 'lisa' ? 'Aaron and Rebecca' : 'Lisa';
 
     const facts = [
       `Sender: ${sender}`,
@@ -30,7 +32,7 @@ export async function handler(event) {
           'Use ONLY the dates given — never invent or alter a date. ' +
           'Propose the alternate window as a suggestion and explicitly invite the other parent to counter or discuss. ' +
           'Return ONLY the message text, no preamble, no quotes, no markdown.',
-        messages: [{ role: 'user', content: `Draft a text to my co-parent Lisa.\n\n${facts}` }],
+        messages: [{ role: 'user', content: `Draft a text from ${sender} to ${recipient}, the other household.\n\n${facts}` }],
       }),
     });
 

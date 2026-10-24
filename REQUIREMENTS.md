@@ -6,7 +6,7 @@ app: Goldstein Scheduler
 repo: globalgoldstein-ai/goldstein-scheduler
 live: https://goldstein-scheduler.netlify.app
 ---
-<!-- Goldstein Scheduler | Phase 7 | Session 3 | Build 3 | 2026-10-24 12:44 ET | REQUIREMENTS.md: current deployed state -->
+<!-- Goldstein Scheduler | Phase 7 | Session 3 | Build 4 | 2026-10-24 12:47 ET | REQUIREMENTS.md: current deployed state -->
 
 # Goldstein Kids Scheduler — REQUIREMENTS.md
 
@@ -61,7 +61,7 @@ Shared custody and event tracker for two households. Zoe alternates weeks betwee
 
 1. `suggestAlternate(swap, event)` (`src/lib/suggest.js`) computes an alternate window. **Deterministic — not AI. Do not replace with a model call.** It keeps the swap length, tries before the event then after, and only accepts a window whose both ends fall in weeks where the swap's `default_parent` is unchanged. Returns `null` if none.
 2. `Dashboard.jsx` POSTs `{ sender, alternate, conflict }` to `/.netlify/functions/draft-message`, where `conflict` is `{ swapStart, swapEnd, eventTitle, eventCategory, eventStart, eventEnd }`.
-3. The function asks Claude for a text under 320 characters, using only the supplied dates, proposing the alternate and inviting a counter. With a `null` alternate it asks to discuss. Returns `{ text }`; on failure `{ error }` with status 502 or 500.
+3. The function asks Claude for a text under 320 characters, addressed to the other household (Lisa, or Aaron and Rebecca when the sender is Lisa), using only the supplied dates, proposing the alternate and inviting a counter. With a `null` alternate it asks to discuss. Returns `{ text }`; on failure `{ error }` with status 502 or 500.
 4. The card shows a loading state, an error state, the draft with **Copy**, and **Redraft**. Code fences are stripped from the response.
 5. **Drafting is read-only and writes no audit row.**
 
@@ -103,7 +103,6 @@ Original spec items that do not exist yet:
 ## 10. Known limitations and open decisions
 
 - **`suggestAlternate` returns `null` for most full-week swaps.** Measured over a year of synthetic swaps: 0% for 1–3 days, 28% for 4 days, **98% for 7 days**. Weekly rotation means a 7-day window rarely sits inside one parity week. The rule works as written; the constraint may be too strict. **Decide before relaxing it.**
-- **Drafts always address Lisa.** The function prompt says "my co-parent Lisa" regardless of sender, so a draft generated with "I am: Lisa" is addressed to herself.
 - **Anyone with the URL can read and write.** Permissive anon RLS plus a public site, until auth lands.
 - Free-tier Supabase will pause again after idle weeks. Upgrade, or add a scheduled keep-alive.
 
