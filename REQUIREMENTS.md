@@ -6,7 +6,7 @@ app: Goldstein Scheduler
 repo: globalgoldstein-ai/goldstein-scheduler
 live: https://goldstein-scheduler.netlify.app
 ---
-<!-- Goldstein Scheduler | Phase 7 | Session 3 | Build 2 | 2026-10-24 12:19 ET | REQUIREMENTS.md: current deployed state -->
+<!-- Goldstein Scheduler | Phase 7 | Session 3 | Build 3 | 2026-10-24 12:44 ET | REQUIREMENTS.md: current deployed state -->
 
 # Goldstein Kids Scheduler — REQUIREMENTS.md
 
@@ -109,8 +109,7 @@ Original spec items that do not exist yet:
 
 ## 11. Conventions
 
-- File headers, diffs over rewrites and `dist/` handling follow the app-building protocol and are not repeated here. Markdown docs carry YAML frontmatter (`type`, `status`, `updated`).
-- Do not touch schema, RLS, schedule parity logic, or the append-only audit constraint without an explicit decision.
+Working rules for Claude Code (file headers, diffs, do-not-touch list) live in `CLAUDE.md`. Markdown docs carry YAML frontmatter (`type`, `status`, `updated`).
 
 ## 12. Last verified
 
