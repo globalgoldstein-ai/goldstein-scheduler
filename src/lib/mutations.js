@@ -1,8 +1,9 @@
-// Goldstein Scheduler | Phase 11 | Session 4 | Build 1 | 2026-10-24 14:50 ET | write layer: swaps + events (with institution) + trades + withdraw, each audited
+// Goldstein Scheduler | Phase 11 | Session 5 | Build 3 | 2026-10-25 16:44 ET | write layer: swaps + events (with institution) + trades + withdraw + edit swap, each audited
 
 import { supabase } from '../supabaseClient.js';
 import { logAudit } from './audit.js';
 import { defaultHousehold } from './schedule.js';
+import { allHeldBy } from './pick.js';
 
 // CREATE SWAP — default_parent is snapshotted from the schedule engine at
 // creation time and never back-rewritten (core invariant).
@@ -84,4 +85,28 @@ export async function withdrawSwap(row, actor) {
   if (error) return { error };
   await logAudit({ actor, action: 'delete', entityType: 'swap', entityId: row.id, before: row });
   return { error: null };
+}
+
+// EDIT SWAP — new dates and/or notes. default_parent and receiving_parent never change:
+// the days must still be the default_parent's own days (same rule as creating).
+// Changing dates counts as a new ask: status goes back to 'proposed' and the editor becomes
+// proposed_by, so the other household has to agree again. A notes-only edit leaves status alone.
+// The update only matches while status is unchanged since the row was loaded.
+export async function updateSwap(row, { date_start, date_end, notes }, actor) {
+  if (!date_start || !date_end || date_end < date_start) {
+    return { data: null, error: { message: 'Pick the first and last day.' } };
+  }
+  if (!allHeldBy(date_start, date_end, row.default_parent)) {
+    return { data: null, error: { message: 'Every day must be one of the original household\'s own days.' } };
+  }
+  const note = (notes ?? '').trim() || null;
+  const datesChanged = date_start !== row.date_start || date_end !== row.date_end;
+  if (!datesChanged && note === (row.notes ?? null)) return { data: row, error: { message: 'Nothing changed.' } };
+  const patch = { date_start, date_end, notes: note };
+  if (datesChanged) { patch.status = 'proposed'; patch.proposed_by = actor; }
+  const { data, error } = await supabase
+    .from('swaps').update(patch).eq('id', row.id).eq('status', row.status).select().single();
+  if (error) return { data: null, error: { message: 'This swap changed since you opened it. Close it, reload, and try again.' } };
+  await logAudit({ actor, action: 'edit', entityType: 'swap', entityId: row.id, before: row, after: data });
+  return { data, error: null };
 }

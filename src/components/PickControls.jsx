@@ -1,8 +1,8 @@
-// Goldstein Scheduler | Phase 11 | Session 5 | Build 1 | 2026-10-25 16:13 ET | tap-to-select banner and confirm bar for swaps and trade returns
+// Goldstein Scheduler | Phase 11 | Session 5 | Build 3 | 2026-10-25 16:44 ET | tap-to-select banner and confirm bar for swaps, trade returns and swap edits
 import { useState } from 'react';
-import { createSwap, createTrade } from '../lib/mutations.js';
+import { createSwap, createTrade, updateSwap } from '../lib/mutations.js';
 import { householdLabel, parseDate } from '../lib/schedule.js';
-import { dayCount, holderNeeded, rangeProblem, receivingFor } from '../lib/pick.js';
+import { dayCount, holderNeeded, otherHousehold, rangeProblem, receivingFor } from '../lib/pick.js';
 
 const nice = (s) => parseDate(s).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
 const days = (n) => `${n} day${n === 1 ? '' : 's'}`;
@@ -14,37 +14,47 @@ export function PickBanner({ pick }) {
   const ask = pick.kind === 'ask';
   const need = holderNeeded(pick);
   const msg = pick.suggested && pick.start && pick.end
-    ? 'Suggested days are selected. Tap any day to choose different ones.'
+    ? (pick.kind === 'edit' ? 'The current days are selected. Tap any day to choose different ones.' : 'Suggested days are selected. Tap any day to choose different ones.')
     : !pick.start
       ? (ask ? 'Tap the first day.' : 'Tap the first day to give back.')
       : !pick.end
         ? 'Tap the last day (or tap the same day again).'
         : 'Check the days below, then confirm. Tap a day to start over.';
-  const why = pick.kind === 'return'
+  const why = pick.kind === 'edit'
+    ? `Greyed days aren't ${householdLabel(pick.original.default_parent)}'s own days, so this swap can't move onto them.`
+    : pick.kind === 'return'
     ? `Greyed days aren't ${householdLabel(pick.original.receiving_parent)}'s own days, so they can't be given back.`
     : need && !pick.end ? `Greyed days aren't ${householdLabel(need)}'s by default, so they can't be in the same request.` : null;
   return (
     <div role="status" style={{ marginTop: 12, padding: '10px 12px', borderRadius: 8, background: '#e3f2fd', border: '1px solid #90caf9', color: '#0d47a1', fontSize: 14 }}>
-      <strong>{pick.kind === 'return' ? 'Give days back: ' : 'Ask for days: '}</strong>{msg}
+      <strong>{pick.kind === 'edit' ? 'Edit swap: ' : pick.kind === 'return' ? 'Give days back: ' : 'Ask for days: '}</strong>{msg}
       {why && <div style={{ fontSize: 12, color: '#37627f', marginTop: 4 }}>{why}</div>}
     </div>
   );
 }
 
 export function PickBar({ pick, setPick, actor, onCancel, onDone }) {
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState(pick.kind === 'edit' ? (pick.original.notes ?? '') : '');
   const [busy, setBusy] = useState(false);
   const done = pick.start && pick.end;
   const recv = receivingFor(pick);
   const ask = pick.kind === 'ask';
+  const edit = pick.kind === 'edit';
+  const datesChanged = edit && done && (pick.start !== pick.original.date_start || pick.end !== pick.original.date_end);
+  const notesChanged = edit && (notes.trim() || null) !== (pick.original.notes ?? null);
+  const needsAgain = datesChanged && pick.original.status !== 'proposed';
+  const asker = actor === 'lisa' ? 'lisa' : 'aaron_rebecca';
 
   async function submit() {
     const bad = rangeProblem(pick, pick.start, pick.end);
     if (bad) return setPick({ ...pick, err: bad });
     setBusy(true);
-    const { error } = ask
-      ? await createSwap({ date_start: pick.start, date_end: pick.end, receiving_parent: recv, status: 'proposed', proposed_by: actor, notes }, actor)
-      : await createTrade(pick.original, { date_start: pick.start, date_end: pick.end, notes }, actor);
+    const dates = { date_start: pick.start, date_end: pick.end, notes };
+    const { error } = edit
+      ? await updateSwap(pick.original, dates, actor)
+      : ask
+        ? await createSwap({ ...dates, receiving_parent: recv, status: 'proposed', proposed_by: actor }, actor)
+        : await createTrade(pick.original, dates, actor);
     setBusy(false);
     if (error) return setPick({ ...pick, err: error.message });
     onDone(pick.start);
@@ -62,8 +72,14 @@ export function PickBar({ pick, setPick, actor, onCancel, onDone }) {
           </div>
           <div style={{ fontSize: 13, color: '#556', margin: '2px 0 8px' }}>
             {householdLabel(recv)} would have Zoe.
-            {!ask && ` The first side was ${days(dayCount(pick.original.date_start, pick.original.date_end))}.`}
+            {pick.kind === 'return' && ` The first side was ${days(dayCount(pick.original.date_start, pick.original.date_end))}.`}
           </div>
+          {edit && needsAgain && (
+            <div style={{ fontSize: 13, color: '#b26a00', margin: '0 0 8px' }}>
+              Changing the days is a new ask: {householdLabel(otherHousehold(asker))} will need to agree again.
+            </div>
+          )}
+          {edit && !datesChanged && !notesChanged && <div style={{ fontSize: 13, color: '#889', margin: '0 0 8px' }}>No changes yet.</div>}
           <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} style={box} />
         </>
       ) : (
@@ -73,9 +89,9 @@ export function PickBar({ pick, setPick, actor, onCancel, onDone }) {
       )}
       {pick.err && <p role="alert" style={{ color: '#c00', fontSize: 13, margin: '8px 0 0' }}>{pick.err}</p>}
       <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-        <button onClick={submit} disabled={!done || busy}
-          style={{ ...btn, border: 0, background: ask ? '#2e7d32' : '#00695c', color: '#fff', opacity: !done || busy ? 0.5 : 1 }}>
-          {busy ? 'Saving…' : ask ? 'Ask for days' : 'Add return side'}
+        <button onClick={submit} disabled={!done || busy || (edit && !datesChanged && !notesChanged)}
+          style={{ ...btn, border: 0, background: edit ? '#1565c0' : ask ? '#2e7d32' : '#00695c', color: '#fff', opacity: !done || busy || (edit && !datesChanged && !notesChanged) ? 0.5 : 1 }}>
+          {busy ? 'Saving…' : edit ? 'Save changes' : ask ? 'Ask for days' : 'Add return side'}
         </button>
         <button onClick={() => setPick({ ...pick, start: null, end: null, suggested: false, err: null })} disabled={busy || !pick.start}
           style={{ ...btn, border: '1px solid #99a', background: '#fff', color: '#445', opacity: !pick.start ? 0.5 : 1 }}>Clear</button>

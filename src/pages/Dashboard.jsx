@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 5 | Build 2 | 2026-10-25 16:40 ET | dashboard: balance + holiday tally + schedule/holidays views + holiday swaps + trades + withdraw + tap-to-select swaps/returns + draft button
+// Goldstein Scheduler | Phase 11 | Session 5 | Build 3 | 2026-10-25 16:44 ET | dashboard: balance + holiday tally + schedule/holidays/history views + holiday swaps + trades + withdraw + edit swap + tap-to-select + draft button
 import { useState, useRef } from 'react';
 import { useData } from '../hooks/useData.js';
 import { swapBalance, householdLabel } from '../lib/schedule.js';
@@ -11,6 +11,7 @@ import { groupSwaps } from '../lib/trades.js';
 import BalanceTile from '../components/BalanceTile.jsx';
 import CalendarView from '../components/CalendarView.jsx';
 import HolidaysView from '../components/HolidaysView.jsx';
+import HistoryView from '../components/HistoryView.jsx';
 import { PickBanner, PickBar } from '../components/PickControls.jsx';
 import { versionLabel } from '../version.js';
 import EventForm from '../components/EventForm.jsx';
@@ -133,10 +134,10 @@ function ConflictCard({ conflict, sender, swaps, events }) {
 }
 
 export default function Dashboard() {
-  const { swaps, events, loading, error, refetch } = useData();
+  const { swaps, events, audit, loading, error, refetch } = useData();
   const [actor, setActor] = useState('aaron');
   const [tab, setTab] = useState(null); // 'swap' | 'event' | null
-  const [view, setView] = useState('schedule'); // 'schedule' | 'holidays'
+  const [view, setView] = useState('schedule'); // 'schedule' | 'holidays' | 'history'
   const [pick, setPick] = useState(null); // tap-to-select: { kind: 'ask'|'return', original?, start, end, suggested, err }
   const calRef = useRef(null);
   const [jumpTo, setJumpTo] = useState(null); // 'YYYY-MM-DD#n': calendar shows this month after a save
@@ -150,6 +151,7 @@ export default function Dashboard() {
     if (month) setJumpTo(`${month}#${Date.now()}`);
     setTimeout(() => calRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }), 60);
   };
+  const beginEdit = (row) => beginPick({ kind: 'edit', original: row, start: row.date_start, end: row.date_end, suggested: true, err: null }, row.date_start);
   const beginAsk = (date = null) => beginPick({ kind: 'ask', start: date, end: null, suggested: false, err: null }, date);
   const beginReturn = (swap) => {
     const today = new Date().toLocaleDateString('en-CA');
@@ -202,6 +204,13 @@ export default function Dashboard() {
     </button>
   );
 
+  const editBtn = (row) => (
+    <button onClick={() => beginEdit(row)}
+      style={{ marginLeft: 8, padding: '6px 12px', minHeight: 36, fontSize: 13, borderRadius: 6, border: '1px solid #1565c0', background: '#fff', color: '#1565c0', fontWeight: 600 }}>
+      Edit
+    </button>
+  );
+
   const Row = ({ row, table, label }) => (
     <div style={{ padding: 12, marginBottom: 8, border: '1px solid #e3e8ef', borderRadius: 8, fontSize: 14 }}>
       <div>{label}</div>
@@ -214,6 +223,7 @@ export default function Dashboard() {
           Mark agreed
         </button>
       )}
+      {table === 'swaps' && editBtn(row)}
       {table === 'swaps' && withdrawBtn(row)}
     </div>
   );
@@ -233,7 +243,7 @@ export default function Dashboard() {
       <BalanceTile balance={balance} holiday={holiday} since={since} />
 
       <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
-        {[['schedule', 'Schedule'], ['holidays', 'Holidays']].map(([k, label]) => (
+        {[['schedule', 'Schedule'], ['holidays', 'Holidays'], ['history', 'History']].map(([k, label]) => (
           <button key={k} onClick={() => { setView(k); if (k !== 'schedule') setPick(null); }} aria-pressed={view === k}
             style={{ padding: '8px 16px', fontSize: 14, borderRadius: 8, fontWeight: 600, cursor: 'pointer',
               border: '1px solid #263238', background: view === k ? '#263238' : '#fff', color: view === k ? '#fff' : '#263238' }}>
@@ -248,10 +258,10 @@ export default function Dashboard() {
           <CalendarView swaps={swaps} events={events} jumpTo={jumpTo}
             pick={pick} pickOk={(d) => dayOk(pick, d)} onPickDay={tapDay}
             onAskFrom={pick ? null : beginAsk} />
-          {pick && <PickBar pick={pick} setPick={setPick} actor={actor} onCancel={() => setPick(null)}
+          {pick && <PickBar key={`${pick.kind}-${pick.original?.id ?? ''}`} pick={pick} setPick={setPick} actor={actor} onCancel={() => setPick(null)}
             onDone={(d) => { setPick(null); saved(d); }} />}
         </div>
-      ) : <HolidaysView swaps={swaps} events={events} />}
+      ) : view === 'history' ? <HistoryView audit={audit} /> : <HolidaysView swaps={swaps} events={events} />}
 
       <div style={{ display: 'flex', gap: 8, margin: '20px 0 16px' }}>
         <button onClick={() => (pick?.kind === 'ask' ? setPick(null) : beginAsk())}
@@ -304,7 +314,7 @@ export default function Dashboard() {
             {g.rows.map((r) => (
               <div key={r.id} style={{ marginBottom: 4 }}>
                 {householdLabel(r.receiving_parent)} gets {span(r)} · <strong>{statusText(r.status)}</strong>
-                {withdrawBtn(r)}
+                {editBtn(r)}{withdrawBtn(r)}
               </div>
             ))}
             {pending && (
