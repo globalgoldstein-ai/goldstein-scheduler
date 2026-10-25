@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 4 | Session 1 | Build 1 | 2026-07-03 12:58 ET | live data hook: swaps + events + audit
+// Goldstein Scheduler | Phase 11 | Session 4 | Build 1 | 2026-10-24 14:50 ET | live data hook: swaps + events + audit; refetch keeps the screen mounted
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient.js';
 
@@ -9,8 +9,9 @@ export function useData() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // `loading` is only true on the first load. Refetches after a save keep the
+  // page mounted, so the calendar keeps its month and open forms keep state.
   const refetch = useCallback(async () => {
-    setLoading(true);
     const [s, e, a] = await Promise.all([
       supabase.from('swaps').select('*').order('date_start', { ascending: true }),
       supabase.from('events').select('*').order('date_start', { ascending: true }),

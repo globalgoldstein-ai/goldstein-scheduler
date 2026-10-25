@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 9 | Session 3 | Build 3 | 2026-10-24 14:19 ET | event form (holiday / no school / trip, with institution)
+// Goldstein Scheduler | Phase 11 | Session 4 | Build 1 | 2026-10-24 14:50 ET | event form (holiday / no school / trip, with institution)
 import { useState } from 'react';
 import { createEvent } from '../lib/mutations.js';
 
@@ -9,7 +9,11 @@ export default function EventForm({ actor, onDone }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
 
-  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const set = (k) => (e) => {
+    const v = e.target.value;
+    if (k === 'date_start' && v && (!f.date_end || f.date_end < v)) return setF({ ...f, date_start: v, date_end: v });
+    setF({ ...f, [k]: v });
+  };
 
   async function submit() {
     setErr(null);
@@ -19,8 +23,9 @@ export default function EventForm({ actor, onDone }) {
     const { error } = await createEvent({ ...f, status: 'proposed' }, actor);
     setBusy(false);
     if (error) return setErr(error.message);
+    const start = f.date_start;
     setF({ title: '', kid: 'zoe', category: 'holiday', institution: '', date_start: '', date_end: '', notes: '' });
-    onDone();
+    onDone(start);
   }
 
   return (

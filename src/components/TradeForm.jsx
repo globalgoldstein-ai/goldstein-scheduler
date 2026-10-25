@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 10 | Session 3 | Build 1 | 2026-10-24 14:13 ET | trade form: add the other side of a swap
+// Goldstein Scheduler | Phase 11 | Session 4 | Build 1 | 2026-10-24 14:50 ET | trade form: add the other side of a swap; dates always prefilled
 import { useState } from 'react';
 import { createTrade } from '../lib/mutations.js';
 import { suggestReturn } from '../lib/suggest.js';
@@ -11,11 +11,21 @@ const nice = (s) => parseDate(s).toLocaleDateString('en-US', { weekday: 'short',
 export default function TradeForm({ swap, swaps, events, actor, onDone, onCancel }) {
   const today = new Date().toLocaleDateString('en-CA');
   const suggestion = suggestReturn(swap, { swaps, events, today });
-  const [f, setF] = useState({ date_start: suggestion?.date_start ?? '', date_end: suggestion?.date_end ?? '', notes: '' });
+  // No suggestion: start one week after the first side, so the iPhone picker opens near it.
+  const wk = (s) => new Date(parseDate(s).getTime() + 7 * 86400000).toISOString().slice(0, 10);
+  const [f, setF] = useState({
+    date_start: suggestion?.date_start ?? wk(swap.date_start),
+    date_end: suggestion?.date_end ?? wk(swap.date_end),
+    notes: '',
+  });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
 
-  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const set = (k) => (e) => {
+    const v = e.target.value;
+    if (k === 'date_start' && v && (!f.date_end || f.date_end < v)) return setF({ ...f, date_start: v, date_end: v });
+    setF({ ...f, [k]: v });
+  };
   const giver = householdLabel(swap.receiving_parent);   // gets days back out of its own weeks
   const getter = householdLabel(swap.default_parent);    // receives the return days
 
@@ -30,7 +40,7 @@ export default function TradeForm({ swap, swaps, events, actor, onDone, onCancel
     const { error } = await createTrade(swap, f, actor);
     setBusy(false);
     if (error) return setErr(error.message);
-    onDone();
+    onDone(f.date_start);
   }
 
   return (
@@ -43,7 +53,7 @@ export default function TradeForm({ swap, swaps, events, actor, onDone, onCancel
 
       {suggestion
         ? <p style={{ fontSize: 13, color: '#00695c', margin: '0 0 10px' }}>Suggested: {nice(suggestion.date_start)} – {nice(suggestion.date_end)}. Change it if you like.</p>
-        : <p style={{ fontSize: 13, color: '#b26a00', margin: '0 0 10px' }}>No free matching window found in the next 8 weeks. Pick dates yourself.</p>}
+        : <p style={{ fontSize: 13, color: '#b26a00', margin: '0 0 10px' }}>No free matching window in the next 8 weeks. The dates below are a starting point; change them.</p>}
 
       <label style={{ fontSize: 12, color: '#667' }}>Return start</label>
       <input type="date" value={f.date_start} onChange={set('date_start')} style={box} />

@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 3 | Session 1 | Build 1 | 2026-07-03 12:41 ET | schedule engine: default + swap overlay + balance
+// Goldstein Scheduler | Phase 11 | Session 4 | Build 1 | 2026-10-24 14:50 ET | schedule engine: default + swap overlay + balance; read-only ruleFor for labels
 
 // Parse 'YYYY-MM-DD' as UTC (avoids local-timezone day drift on custody dates).
 export function parseDate(input) {
@@ -34,6 +34,15 @@ export function defaultHousehold(input, rules = DEFAULT_RULES) {
     .filter((r) => parseDate(r.from) <= d)
     .sort((a, b) => parseDate(b.from) - parseDate(a.from))[0];
   return isoWeek(d) % 2 === 1 ? rule.oddWeek : rule.evenWeek;
+}
+
+// Read-only: the rule in force on a date, for labels like "Lisa: even weeks".
+// Same selection as defaultHousehold; parity logic itself is unchanged.
+export function ruleFor(input, rules = DEFAULT_RULES) {
+  const d = parseDate(input);
+  return [...rules]
+    .filter((r) => parseDate(r.from) <= d)
+    .sort((a, b) => parseDate(b.from) - parseDate(a.from))[0];
 }
 
 // EFFECTIVE holder: default, unless an AGREED swap covers the date.

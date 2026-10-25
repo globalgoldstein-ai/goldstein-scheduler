@@ -1,11 +1,11 @@
-// Goldstein Scheduler | Phase 10 | Session 3 | Build 1 | 2026-10-24 14:13 ET | dashboard: balance + holiday tally + schedule/holidays views + holiday swaps + trades + write UI + draft button
+// Goldstein Scheduler | Phase 11 | Session 4 | Build 1 | 2026-10-24 14:50 ET | dashboard: balance + holiday tally + schedule/holidays views + holiday swaps + trades + withdraw + write UI + draft button
 import { useState } from 'react';
 import { useData } from '../hooks/useData.js';
 import { swapBalance, householdLabel } from '../lib/schedule.js';
 import { holidayTally, trackingSince } from '../lib/tally.js';
 import { categoryLabel, kidLabel } from '../lib/labels.js';
 import { suggestAlternate } from '../lib/suggest.js';
-import { updateStatus, updateTradeStatus } from '../lib/mutations.js';
+import { updateStatus, updateTradeStatus, withdrawSwap } from '../lib/mutations.js';
 import { groupSwaps } from '../lib/trades.js';
 import BalanceTile from '../components/BalanceTile.jsx';
 import CalendarView from '../components/CalendarView.jsx';
@@ -15,6 +15,7 @@ import EventForm from '../components/EventForm.jsx';
 import TradeForm from '../components/TradeForm.jsx';
 
 const ACTORS = ['aaron', 'rebecca', 'lisa'];
+const householdOf = (a) => (a === 'lisa' ? 'lisa' : 'aaron_rebecca');
 
 // The Claude API sometimes wraps output in ``` fences despite the system prompt.
 // Strip them from anything we parse or display.
@@ -102,8 +103,13 @@ function ConflictCard({ conflict, sender, swaps, events }) {
           opacity: state === 'loading' ? 0.6 : 1,
         }}
       >
-        {state === 'loading' ? 'Drafting…' : state === 'done' ? 'Redraft' : 'Propose different dates'}
+        {state === 'loading' ? 'Drafting…' : state === 'done' ? 'Redraft' : 'Suggest other dates'}
       </button>
+      {state === 'idle' && (
+        <div style={{ fontSize: 12, color: '#667', marginTop: 4 }}>
+          Optional. Writes a text you can copy and send, offering days outside the break. Nothing changes in the app.
+        </div>
+      )}
 
       {state === 'error' && (
         <div style={{ marginTop: 8, fontSize: 13, color: '#c00' }}>Couldn’t draft: {errMsg}</div>
@@ -131,6 +137,8 @@ export default function Dashboard() {
   const [tab, setTab] = useState(null); // 'swap' | 'event' | null
   const [view, setView] = useState('schedule'); // 'schedule' | 'holidays'
   const [tradeFor, setTradeFor] = useState(null); // swap id with the trade form open
+  const [jumpTo, setJumpTo] = useState(null); // 'YYYY-MM-DD#n': calendar shows this month after a save
+  const saved = (date) => { if (date) setJumpTo(`${date}#${Date.now()}`); refetch(); };
 
   if (loading) return <p style={{ padding: 24 }}>Loading…</p>;
   if (error) return <p style={{ padding: 24, color: '#c00' }}>Error: {error}</p>;
@@ -154,12 +162,28 @@ export default function Dashboard() {
     return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
   };
   const span = (r) => (r.date_start === r.date_end ? nice(r.date_start) : `${nice(r.date_start)} – ${nice(r.date_end)}`);
+  const statusText = (st) => (st === 'proposed' ? 'asked, waiting' : st === 'needs_discussion' ? 'needs discussion' : st);
+
+  // Only the household that asked can withdraw, and only while it's still waiting.
+  const withdraw = async (row) => {
+    if (!window.confirm(`Withdraw this request (${span(row)})? It will be removed.`)) return;
+    const { error } = await withdrawSwap(row, actor);
+    if (error) window.alert(error.message);
+    refetch();
+  };
+  const canWithdraw = (row) => row.status === 'proposed' && householdOf(row.proposed_by) === householdOf(actor);
+  const withdrawBtn = (row) => canWithdraw(row) && (
+    <button onClick={() => withdraw(row)}
+      style={{ marginLeft: 8, padding: '6px 12px', fontSize: 13, borderRadius: 6, border: '1px solid #b71c1c', background: '#fff', color: '#b71c1c', fontWeight: 600 }}>
+      Withdraw
+    </button>
+  );
 
   const Row = ({ row, table, label }) => (
     <div style={{ padding: 12, marginBottom: 8, border: '1px solid #e3e8ef', borderRadius: 8, fontSize: 14 }}>
       <div>{label}</div>
       <div style={{ fontSize: 12, color: '#778', margin: '4px 0' }}>
-        {row.date_start} → {row.date_end} · <strong>{row.status}</strong>
+        {span(row)} · <strong>{statusText(row.status)}</strong>
       </div>
       {row.status !== 'agreed' && (
         <button onClick={() => agree(table, row)}
@@ -167,6 +191,7 @@ export default function Dashboard() {
           Mark agreed
         </button>
       )}
+      {table === 'swaps' && withdrawBtn(row)}
     </div>
   );
 
@@ -195,7 +220,7 @@ export default function Dashboard() {
       </div>
 
       {view === 'schedule'
-        ? <CalendarView swaps={swaps} events={events} />
+        ? <CalendarView swaps={swaps} events={events} jumpTo={jumpTo} />
         : <HolidaysView swaps={swaps} events={events} />}
 
       <div style={{ display: 'flex', gap: 8, margin: '20px 0 16px' }}>
@@ -209,14 +234,17 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {tab === 'swap' && <SwapForm actor={actor} onDone={() => { setTab(null); refetch(); }} />}
-      {tab === 'event' && <EventForm actor={actor} onDone={() => { setTab(null); refetch(); }} />}
+      {tab === 'swap' && <SwapForm actor={actor} onDone={(d) => { setTab(null); saved(d); }} />}
+      {tab === 'event' && <EventForm actor={actor} onDone={(d) => { setTab(null); saved(d); }} />}
 
-      <h2 style={{ fontSize: 16, margin: '24px 0 8px' }}>
-        Holiday swaps {holiday.items.length > 0 && `(${holiday.items.length})`}
+      <h2 style={{ fontSize: 16, margin: '24px 0 4px' }}>
+        Swaps during holidays {holiday.items.length > 0 && `(${holiday.items.length})`}
       </h2>
+      <p style={{ fontSize: 13, color: '#667', margin: '0 0 8px' }}>
+        Agreed swaps that fall on a holiday or no-school day. That's allowed. They're listed so holidays stay fair, and counted in the Holiday swaps total above.
+      </p>
       {holiday.items.length === 0 ? (
-        <p style={{ color: '#778' }}>No agreed swaps land on a holiday or no-school day.</p>
+        <p style={{ color: '#778' }}>None yet.</p>
       ) : (
         holiday.items.map((c) => (
           <ConflictCard key={c.swap.id} conflict={c} sender={actor} swaps={swaps} events={events} />
@@ -240,7 +268,7 @@ export default function Dashboard() {
               {tradeFor === s.id && (
                 <TradeForm swap={s} swaps={swaps} events={events} actor={actor}
                   onCancel={() => setTradeFor(null)}
-                  onDone={() => { setTradeFor(null); refetch(); }} />
+                  onDone={(d) => { setTradeFor(null); saved(d); }} />
               )}
             </div>
           );
@@ -251,7 +279,8 @@ export default function Dashboard() {
             <div style={{ fontWeight: 700, marginBottom: 4 }}>⇄ Trade</div>
             {g.rows.map((r) => (
               <div key={r.id} style={{ marginBottom: 4 }}>
-                {householdLabel(r.receiving_parent)} gets {span(r)} · <strong>{r.status}</strong>
+                {householdLabel(r.receiving_parent)} gets {span(r)} · <strong>{statusText(r.status)}</strong>
+                {withdrawBtn(r)}
               </div>
             ))}
             {pending && (

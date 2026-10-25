@@ -1,10 +1,13 @@
-// Goldstein Scheduler | Phase 9 | Session 3 | Build 2 | 2026-10-24 13:44 ET | tally: "since" date and holiday swap count
+// Goldstein Scheduler | Phase 11 | Session 4 | Build 2 | 2026-10-24 17:22 ET | tally: "since" date and holiday swap count; plainer card wording (says whose days they were)
 
 import { parseDate, householdLabel } from './schedule.js';
 import { detectConflicts } from './conflicts.js';
 
 const fmt = (d) => parseDate(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-const span = (a, b) => (a === b ? fmt(a) : `${fmt(a)}–${fmt(b)}`);
+const day = (d) => parseDate(d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+const span = (a, b) => (a === b ? fmt(a) : `${fmt(a)} – ${fmt(b)}`);
+const daySpan = (a, b) => (a === b ? day(a) : `${day(a)} – ${day(b)}`);
+const verb = (h) => (h === 'aaron_rebecca' ? 'have' : 'has');
 
 // Earliest agreed swap start. History before the app existed is not recorded,
 // so every running total is labeled "since <this date>".
@@ -42,8 +45,8 @@ export function holidayTally(swaps = [], events = []) {
       event: best.event,
       events: evs,
       message:
-        `${householdLabel(swap.receiving_parent)} has Zoe ${span(swap.date_start, swap.date_end)}, ` +
-        `covering ${evs.map((e) => `${e.title} (${span(e.date_start, e.date_end)})`).join(' and ')}.`,
+        `${householdLabel(swap.receiving_parent)} ${verb(swap.receiving_parent)} Zoe ${daySpan(swap.date_start, swap.date_end)} instead of ${householdLabel(swap.default_parent)}, ` +
+        `during ${evs.map((e) => `${e.title} (${span(e.date_start, e.date_end)})`).join(' and ')}.`,
     })),
   };
 }

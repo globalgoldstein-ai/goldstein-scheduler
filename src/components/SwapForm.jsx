@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 6 | Session 1 | Build 1 | 2026-07-03 13:52 ET | swap proposal form
+// Goldstein Scheduler | Phase 11 | Session 4 | Build 1 | 2026-10-24 14:50 ET | swap proposal form; end date follows start so the picker opens on the right month
 import { useState } from 'react';
 import { createSwap } from '../lib/mutations.js';
 import { defaultHousehold, householdLabel } from '../lib/schedule.js';
@@ -10,7 +10,12 @@ export default function SwapForm({ actor, onDone }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
 
-  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  // Picking a start fills an empty or earlier end, so the iPhone picker for End opens on that month.
+  const set = (k) => (e) => {
+    const v = e.target.value;
+    if (k === 'date_start' && v && (!f.date_end || f.date_end < v)) return setF({ ...f, date_start: v, date_end: v });
+    setF({ ...f, [k]: v });
+  };
 
   // Receiving household is DERIVED: whoever isn't the default that week.
   const def = f.date_start ? defaultHousehold(f.date_start) : null;
@@ -27,8 +32,9 @@ export default function SwapForm({ actor, onDone }) {
     );
     setBusy(false);
     if (error) return setErr(error.message);
+    const start = f.date_start;
     setF({ date_start: '', date_end: '', notes: '' });
-    onDone();
+    onDone(start);
   }
 
   return (

@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 10 | Session 3 | Build 2 | 2026-10-24 14:19 ET | holidays and no-school days: list or calendar, with who has Zoe
+// Goldstein Scheduler | Phase 11 | Session 4 | Build 1 | 2026-10-24 14:50 ET | holidays and no-school days: list or calendar, with who has Zoe
 import { useState } from 'react';
 import { parseDate, effectiveHousehold, householdLabel } from '../lib/schedule.js';
 import { isHolidayEvent } from '../lib/conflicts.js';
@@ -81,7 +81,7 @@ export default function HolidaysView({ swaps = [], events = [] }) {
         </div>
       )}
 
-      {mode === 'calendar' && <CalendarView swaps={swaps} events={all} label="Holiday calendar" />}
+      {mode === 'calendar' && <CalendarView swaps={swaps} events={all} label="Holiday calendar" storageKey="gs.holidayCalendarMonth" />}
 
       {mode === 'list' && (
         <div>
