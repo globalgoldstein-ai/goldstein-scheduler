@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 5 | Build 1 | 2026-10-25 16:13 ET | dashboard: balance + holiday tally + schedule/holidays views + holiday swaps + trades + withdraw + tap-to-select swaps/returns + draft button
+// Goldstein Scheduler | Phase 11 | Session 5 | Build 2 | 2026-10-25 16:40 ET | dashboard: balance + holiday tally + schedule/holidays views + holiday swaps + trades + withdraw + tap-to-select swaps/returns + draft button
 import { useState, useRef } from 'react';
 import { useData } from '../hooks/useData.js';
 import { swapBalance, householdLabel } from '../lib/schedule.js';
@@ -12,6 +12,7 @@ import BalanceTile from '../components/BalanceTile.jsx';
 import CalendarView from '../components/CalendarView.jsx';
 import HolidaysView from '../components/HolidaysView.jsx';
 import { PickBanner, PickBar } from '../components/PickControls.jsx';
+import { versionLabel } from '../version.js';
 import EventForm from '../components/EventForm.jsx';
 
 const ACTORS = ['aaron', 'rebecca', 'lisa'];
@@ -320,6 +321,8 @@ export default function Dashboard() {
       {events.map((e) => (
         <Row key={e.id} row={e} table="events" label={`${e.title} (${categoryLabel(e.category)}${e.kid === 'zoe' ? '' : `, ${kidLabel(e.kid)}`})`} />
       ))}
+
+      <p style={{ fontSize: 11, color: '#99a', margin: '32px 0 0', textAlign: 'center' }}>{versionLabel()}</p>
     </div>
   );
 }
