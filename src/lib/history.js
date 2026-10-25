@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 5 | Build 3 | 2026-10-25 16:44 ET | history: turn audit rows into plain-words sentences and field-by-field changes (pure, read-only)
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 1 | 2026-10-25 17:14 ET | history: plain status words (waiting, agreed, let's talk)
 
 import { parseDate, householdLabel } from './schedule.js';
 import { categoryLabel } from './labels.js';
@@ -6,7 +6,7 @@ import { categoryLabel } from './labels.js';
 const cap = (a) => (a ? a[0].toUpperCase() + a.slice(1) : 'Someone');
 const nice = (s) => parseDate(s).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
 const span = (r) => (r.date_start === r.date_end ? nice(r.date_start) : `${nice(r.date_start)} – ${nice(r.date_end)}`);
-const STATUS = { proposed: 'asked, waiting', agreed: 'agreed', needs_discussion: 'needs discussion' };
+const STATUS = { proposed: 'waiting', agreed: 'agreed', needs_discussion: "let's talk" };
 
 export const FIELD_LABEL = {
   date_start: 'First day', date_end: 'Last day', status: 'Status', notes: 'Notes', title: 'Title', kid: 'Kid',
@@ -56,7 +56,7 @@ export function describe(row) {
       const c = Object.fromEntries(details.map((d) => [d.key, d]));
       if (c.date_start || c.date_end) parts.push(`changed the days from ${span(b)} to ${span(a)}`);
       if (c.status) {
-        parts.push(a.status === 'agreed' ? 'agreed' : a.status === 'needs_discussion' ? 'marked it "needs discussion"' : 'set it back to asked, waiting');
+        parts.push(a.status === 'agreed' ? 'agreed' : a.status === 'needs_discussion' ? 'said "let\'s talk"' : 'set it back to waiting');
       }
       if (c.notes) parts.push('changed the note');
       if (c.trade_id && parts.length === 0) parts.push('linked it to a trade');

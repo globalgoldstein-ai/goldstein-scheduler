@@ -1,4 +1,5 @@
-// Goldstein Scheduler | Phase 11 | Session 4 | Build 1 | 2026-10-24 14:50 ET | balance tile: swap days + holiday swaps, both "since" a date, with plain explanations
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 1 | 2026-10-25 17:14 ET | balance: one line, tap to open the two panels with their explanations
+import { useState } from 'react';
 import { parseDate } from '../lib/schedule.js';
 
 const sinceLabel = (since) =>
@@ -23,8 +24,21 @@ function Panel({ title, value, even, detail, since, explain }) {
 
 export default function BalanceTile({ balance, holiday, since }) {
   const s = sinceLabel(since);
+  const [open, setOpen] = useState(false);
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+    <div style={{ marginTop: 12 }}>
+      <button onClick={() => setOpen(!open)} aria-expanded={open}
+        style={{ width: '100%', minHeight: 44, padding: '8px 12px', textAlign: 'left', fontSize: 13, color: '#445', background: '#f5f7fa', border: '1px solid #d7dee8', borderRadius: 10, cursor: 'pointer' }}>
+        Swap balance: <strong>{balance.label}</strong> · Holiday swaps: <strong>{holiday.label}</strong> <span aria-hidden="true">{open ? '▴' : '▾'}</span>
+      </button>
+      {open && <Details balance={balance} holiday={holiday} s={s} />}
+    </div>
+  );
+}
+
+function Details({ balance, holiday, s }) {
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
       <Panel
         title="Swap balance (days)"
         value={balance.label}

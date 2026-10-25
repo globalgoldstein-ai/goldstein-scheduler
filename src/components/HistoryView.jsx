@@ -1,6 +1,7 @@
-// Goldstein Scheduler | Phase 11 | Session 5 | Build 3 | 2026-10-25 16:44 ET | History tab: every recorded change, newest first, in plain words
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 1 | 2026-10-25 17:14 ET | History tab: every recorded change, newest first, plain words; version label at the bottom
 import { useState } from 'react';
 import { describe, whenET } from '../lib/history.js';
+import { versionLabel } from '../version.js';
 
 const pill = (on) => ({
   padding: '8px 14px', minHeight: 44, fontSize: 14, borderRadius: 8, fontWeight: 600, cursor: 'pointer',
@@ -42,6 +43,7 @@ export default function HistoryView({ audit = [] }) {
         );
       })}
       <p style={{ fontSize: 11, color: '#99a' }}>Shows the latest {audit.length >= 200 ? '200' : audit.length} changes.</p>
+      <p style={{ fontSize: 12, color: '#778', textAlign: 'center', margin: '24px 0 0' }}>{versionLabel()}</p>
     </div>
   );
 }

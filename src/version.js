@@ -1,6 +1,6 @@
-// Goldstein Scheduler | Phase 11 | Session 5 | Build 2 | 2026-10-25 16:40 ET | version label shown at the bottom of the page
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 1 | 2026-10-25 17:14 ET | version label shown at the bottom of the History tab
 // PHASE is edited by hand when a phase ships. Commit and build time are injected by vite.config.js.
-export const PHASE = '11b';
+export const PHASE = '11c';
 const commit = typeof __APP_COMMIT__ === 'undefined' ? 'local' : __APP_COMMIT__;
 const built = typeof __APP_BUILT__ === 'undefined' ? null : __APP_BUILT__;
 

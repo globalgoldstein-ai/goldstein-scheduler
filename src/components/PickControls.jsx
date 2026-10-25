@@ -1,8 +1,8 @@
-// Goldstein Scheduler | Phase 11 | Session 5 | Build 5 | 2026-10-25 16:59 ET | one sticky panel ABOVE the calendar: step, summary, notes, save/cancel for swaps, trade returns and swap changes
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 1 | 2026-10-25 17:14 ET | one sticky panel above the calendar: short steps, summary, notes, Ask/Save/Give back + Cancel
 import { useState } from 'react';
 import { createSwap, createTrade, updateSwap } from '../lib/mutations.js';
 import { householdLabel, parseDate } from '../lib/schedule.js';
-import { dayCount, holderNeeded, otherHousehold, rangeProblem, receivingFor } from '../lib/pick.js';
+import { dayCount, otherHousehold, rangeProblem, receivingFor } from '../lib/pick.js';
 
 const nice = (s) => parseDate(s).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
 const spanOf = (a, b) => (a === b ? nice(a) : `${nice(a)} – ${nice(b)}`);
@@ -20,7 +20,6 @@ export default function PickPanel({ pick, setPick, actor, onCancel, onDone }) {
   const recv = receivingFor(pick);
   const ask = pick.kind === 'ask';
   const edit = pick.kind === 'edit';
-  const need = holderNeeded(pick);
   const datesChanged = edit && done && (pick.start !== pick.original.date_start || pick.end !== pick.original.date_end);
   const notesChanged = edit && (notes.trim() || null) !== (pick.original.notes ?? null);
   const nothing = edit && !datesChanged && !notesChanged;
@@ -28,21 +27,14 @@ export default function PickPanel({ pick, setPick, actor, onCancel, onDone }) {
   const asker = actor === 'lisa' ? 'lisa' : 'aaron_rebecca';
   const was = edit ? spanOf(pick.original.date_start, pick.original.date_end) : null;
 
-  // The one sentence that tells you what to do next.
+  // The one short sentence that tells you what to do next.
   const step = !pick.start
-    ? `Step 1 of 2 · Tap the ${edit ? 'new ' : ''}first day on the calendar below.`
+    ? (edit ? 'Tap the new first day.' : pick.kind === 'return' ? 'Tap the first day to give back.' : 'Tap the first day.')
     : !pick.end
-      ? `Step 2 of 2 · First day is ${nice(pick.start)}. Now tap the last day (or tap the same day again).`
+      ? 'Tap the last day. (One day? Tap it again.)'
       : edit && nothing
-        ? `Now: ${was}. To move it, tap the new first day, then the new last day. Or just change the note and save.`
-        : pick.suggested
-          ? 'Suggested days are selected. Tap any day to choose different ones, or confirm.'
-          : 'Check the days, then confirm. Tap any day to start over.';
-  const why = edit
-    ? `Greyed days aren't ${householdLabel(pick.original.default_parent)}'s own days, so this swap can't move onto them.`
-    : pick.kind === 'return'
-      ? `Greyed days aren't ${householdLabel(pick.original.receiving_parent)}'s own days, so they can't be given back.`
-      : need && !pick.end ? `Greyed days aren't ${householdLabel(need)}'s by default, so they can't be in the same request.` : null;
+        ? `Now ${was}. Tap a new first day to move it, or just change the note.`
+        : pick.suggested ? 'Suggested days are selected. Tap a day to change them.' : null;
 
   async function submit() {
     const bad = rangeProblem(pick, pick.start, pick.end);
@@ -66,8 +58,7 @@ export default function PickPanel({ pick, setPick, actor, onCancel, onDone }) {
       background: '#e3f2fd', border: '1px solid #64b5f6', boxShadow: '0 2px 10px rgba(0,0,0,0.15)', color: '#0d2f57',
     }}>
       <div style={{ fontSize: 15, fontWeight: 700 }}>{TITLE[pick.kind]}</div>
-      <div style={{ fontSize: 14, marginTop: 2 }}>{step}</div>
-      {why && !done && <div style={{ fontSize: 12, color: '#37627f', marginTop: 4 }}>{why}</div>}
+      {step && <div style={{ fontSize: 14, marginTop: 2 }}>{step}</div>}
 
       {done && (
         <div style={{ marginTop: 8, padding: 10, background: '#fff', borderRadius: 8, color: '#223' }}>
@@ -92,10 +83,10 @@ export default function PickPanel({ pick, setPick, actor, onCancel, onDone }) {
       <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
         <button onClick={submit} disabled={blocked}
           style={{ ...btn, border: 0, background: edit ? '#1565c0' : ask ? '#2e7d32' : '#00695c', color: '#fff', opacity: blocked ? 0.5 : 1 }}>
-          {busy ? 'Saving…' : edit ? 'Save changes' : ask ? 'Ask for days' : 'Add return side'}
+          {busy ? 'Saving…' : edit ? 'Save' : ask ? 'Ask' : 'Give back'}
         </button>
         <button onClick={() => setPick({ ...pick, start: null, end: null, suggested: false, err: null })} disabled={busy || !pick.start}
-          style={{ ...btn, border: '1px solid #99a', background: '#fff', color: '#445', opacity: !pick.start ? 0.5 : 1 }}>Clear days</button>
+          style={{ ...btn, border: '1px solid #99a', background: '#fff', color: '#445', opacity: !pick.start ? 0.5 : 1 }}>Start over</button>
         <button onClick={onCancel} disabled={busy} style={{ ...btn, border: '1px solid #99a', background: '#fff', color: '#445' }}>Cancel</button>
       </div>
     </div>

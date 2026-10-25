@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 5 | Build 3 | 2026-10-25 16:44 ET | write layer: swaps + events (with institution) + trades + withdraw + edit swap, each audited
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 1 | 2026-10-25 17:14 ET | write layer: swaps + events + trades + withdraw (waiting or let's talk) + edit swap, each audited
 
 import { supabase } from '../supabaseClient.js';
 import { logAudit } from './audit.js';
@@ -77,11 +77,11 @@ export async function updateTradeStatus(rows, status, actor) {
   return { error: null };
 }
 
-// WITHDRAW — the asker removes their own request while it is still proposed.
+// WITHDRAW — the asker removes their own request while it is still open (waiting or "let's talk").
 // Agreed swaps can't be withdrawn. The audit row keeps the full deleted record.
 export async function withdrawSwap(row, actor) {
-  if (row.status !== 'proposed') return { error: { message: 'Only requests still waiting can be withdrawn.' } };
-  const { error } = await supabase.from('swaps').delete().eq('id', row.id).eq('status', 'proposed');
+  if (row.status === 'agreed') return { error: { message: 'Only requests that are not agreed yet can be withdrawn.' } };
+  const { error } = await supabase.from('swaps').delete().eq('id', row.id).eq('status', row.status);
   if (error) return { error };
   await logAudit({ actor, action: 'delete', entityType: 'swap', entityId: row.id, before: row });
   return { error: null };
