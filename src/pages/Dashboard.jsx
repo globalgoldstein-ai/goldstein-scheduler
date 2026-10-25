@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 5 | Build 4 | 2026-10-25 16:51 ET | dashboard: balance + holiday tally + schedule/holidays/history views + holiday swaps + trades + withdraw + edit swap + tap-to-select + draft button
+// Goldstein Scheduler | Phase 11 | Session 5 | Build 5 | 2026-10-25 16:59 ET | dashboard: balance + holiday tally + schedule/holidays/history views + holiday swaps + trades + withdraw + edit swap + tap-to-select + draft button
 import { useState, useRef } from 'react';
 import { useData } from '../hooks/useData.js';
 import { swapBalance, householdLabel } from '../lib/schedule.js';
@@ -12,7 +12,7 @@ import BalanceTile from '../components/BalanceTile.jsx';
 import CalendarView from '../components/CalendarView.jsx';
 import HolidaysView from '../components/HolidaysView.jsx';
 import HistoryView from '../components/HistoryView.jsx';
-import { PickBanner, PickBar } from '../components/PickControls.jsx';
+import PickPanel from '../components/PickControls.jsx';
 import { versionLabel } from '../version.js';
 import EventForm from '../components/EventForm.jsx';
 
@@ -255,12 +255,11 @@ export default function Dashboard() {
 
       {view === 'schedule' ? (
         <div ref={calRef} style={{ scrollMarginTop: 8 }}>
-          {pick && <PickBanner pick={pick} />}
+          {pick && <PickPanel key={`${pick.kind}-${pick.original?.id ?? ''}`} pick={pick} setPick={setPick} actor={actor} onCancel={() => setPick(null)}
+            onDone={(d) => { setPick(null); saved(d); }} />}
           <CalendarView swaps={swaps} events={events} jumpTo={jumpTo}
             pick={pick} pickOk={(d) => dayOk(pick, d)} onPickDay={tapDay}
             onAskFrom={pick ? null : beginAsk} onEditSwap={pick ? null : beginEdit} />
-          {pick && <PickBar key={`${pick.kind}-${pick.original?.id ?? ''}`} pick={pick} setPick={setPick} actor={actor} onCancel={() => setPick(null)}
-            onDone={(d) => { setPick(null); saved(d); }} />}
         </div>
       ) : view === 'history' ? <HistoryView audit={audit} /> : <HolidaysView swaps={swaps} events={events} />}
 

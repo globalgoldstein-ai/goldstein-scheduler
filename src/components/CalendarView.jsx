@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 5 | Build 4 | 2026-10-25 16:51 ET | calendar: tap-to-select mode (pick/pickOk/onPickDay), day sheet 'Ask for days from here'
+// Goldstein Scheduler | Phase 11 | Session 5 | Build 5 | 2026-10-25 16:59 ET | calendar: tap-to-select mode (pick/pickOk/onPickDay), day sheet 'Ask for days from here'
 import { useState, useEffect } from 'react';
 import { parseDate, effectiveHousehold, householdLabel, isoWeek, defaultHousehold, ruleFor } from '../lib/schedule.js';
 import { isHolidayEvent } from '../lib/conflicts.js';
@@ -167,7 +167,7 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
                 {dayEvents.some((e) => e.category === 'trip') && <span aria-hidden="true" style={{ fontSize: 12, lineHeight: 1 }}>✈</span>}
                 {picked && (d === pick.start || d === (pick.end ?? pick.start)) && (
                   <span aria-hidden="true" style={{ position: 'relative', zIndex: 3, fontSize: 9, fontWeight: 800, color: '#0d47a1', whiteSpace: 'nowrap' }}>
-                    {pick.start === (pick.end ?? pick.start) ? '1 day' : d === pick.start ? 'start' : 'end'}
+                    {pick.end && pick.start === pick.end ? '1 day' : d === pick.start ? 'start' : 'end'}
                   </span>
                 )}
                 {dayEvents.some((e) => e.category === 'other') && <span style={{ width: 6, height: 6, borderRadius: 3, background: CAT.other }} />}
@@ -223,7 +223,7 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
           {onAskFrom && (
             <button onClick={() => onAskFrom(sel)}
               style={{ marginTop: 10, padding: '10px 16px', minHeight: 44, fontSize: 14, borderRadius: 8, border: '1px solid #2e7d32', background: '#fff', color: '#2e7d32', fontWeight: 600, cursor: 'pointer' }}>
-              Ask for days from here
+              Ask for days starting this day
             </button>
           )}
         </div>
