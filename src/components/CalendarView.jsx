@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 4 | Build 1 | 2026-10-24 14:50 ET | calendar: household tint, swap ribbons, week numbers, extra week, remembered month
+// Goldstein Scheduler | Phase 11 | Session 4 | Build 3 | 2026-10-25 15:56 ET | calendar: taller cells, striped/solid swap ribbons (no badges), holiday top bar, trip plane icon
 import { useState, useEffect } from 'react';
 import { parseDate, effectiveHousehold, householdLabel, isoWeek, defaultHousehold, ruleFor } from '../lib/schedule.js';
 import { isHolidayEvent } from '../lib/conflicts.js';
@@ -18,7 +18,7 @@ const HOUSE = {
   aaron_rebecca: { bg: '#e8f5e9', edge: '#2e7d32' },
   lisa: { bg: '#f3e5f5', edge: '#7b1fa2' },
 };
-const CAT = { holiday: '#c62828', school: '#1565c0', trip: '#ef6c00', other: '#78909c' };
+const CAT = { holiday: '#c62828', school: '#c62828', trip: '#ef6c00', other: '#78909c' };
 const HOLSWAP = '#00897b'; // holiday swaps are normal, so a calm teal instead of a warning color
 
 // Whole weeks (Mon-first) covering the month, PLUS the following week so the
@@ -43,7 +43,7 @@ function loadYm(key, today) {
 }
 
 // One ribbon segment per swap per day. Ends are rounded at the swap's first/last
-// day and at week edges (the grid wraps each Monday).
+// day and at week edges (the grid wraps each Monday). Solid = agreed, striped = asked/waiting.
 function Ribbon({ swap, d, index }) {
   const color = HOUSE[swap.receiving_parent]?.edge ?? '#889';
   const dow = (parseDate(d).getUTCDay() + 6) % 7;
@@ -51,23 +51,14 @@ function Ribbon({ swap, d, index }) {
   const endHere = d === swap.date_end || dow === 6;
   const agreed = swap.status === 'agreed';
   return (
-    <>
-      <span style={{
-        position: 'absolute', zIndex: 1, bottom: 4 + index * 11, height: 8, boxSizing: 'border-box',
-        left: startHere ? 3 : -3, right: endHere ? 3 : -3,
-        borderRadius: `${startHere ? 4 : 0}px ${endHere ? 4 : 0}px ${endHere ? 4 : 0}px ${startHere ? 4 : 0}px`,
-        background: agreed ? color : 'transparent',
-        borderStyle: 'dashed', borderColor: color,
-        borderWidth: agreed ? 0 : `2px ${endHere ? 2 : 0}px 2px ${startHere ? 2 : 0}px`,
-      }} />
-      {d === swap.date_start && index === 0 && (
-        <span style={{
-          position: 'absolute', zIndex: 2, top: 2, right: 2, width: 16, height: 16, borderRadius: 8, boxSizing: 'border-box',
-          fontSize: 10, lineHeight: agreed ? '16px' : '12px', fontWeight: 800, textAlign: 'center',
-          background: agreed ? color : '#fff', color: agreed ? '#fff' : color, border: agreed ? 'none' : `2px solid ${color}`,
-        }}>{agreed ? '⇄' : '?'}</span>
-      )}
-    </>
+    <span style={{
+      position: 'absolute', zIndex: 1, bottom: 5 + index * 13, height: 10, boxSizing: 'border-box',
+      left: startHere ? 3 : -3, right: endHere ? 3 : -3,
+      borderRadius: `${startHere ? 4 : 0}px ${endHere ? 4 : 0}px ${endHere ? 4 : 0}px ${startHere ? 4 : 0}px`,
+      background: agreed ? color : `repeating-linear-gradient(135deg, ${color} 0 3px, transparent 3px 6px)`,
+      borderStyle: 'solid', borderColor: color,
+      borderWidth: agreed ? 0 : `1px ${endHere ? 1 : 0}px 1px ${startHere ? 1 : 0}px`,
+    }} />
   );
 }
 
@@ -122,7 +113,7 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
         <button onClick={() => step(1)} style={navBtn} aria-label="Next month">›</button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '26px repeat(7, minmax(0, 1fr))', gap: 3 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '18px repeat(7, minmax(0, 1fr))', gap: 3 }}>
         <div style={{ textAlign: 'center', fontSize: 10, color: '#99a', padding: '2px 0' }}>Wk</div>
         {DOW.map((n) => (
           <div key={n} style={{ textAlign: 'center', fontSize: 11, color: '#778', padding: '2px 0' }}>{n}</div>
@@ -152,7 +143,7 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
               aria-label={`${fmt(d)}, with ${householdLabel(holder)}${agreedSwap ? ', swap' : ''}${holidaySwap ? ', holiday swap' : ''}`}
               aria-pressed={d === sel}
               style={{
-                position: 'relative', minHeight: 58, padding: '4px 2px', borderRadius: 6, cursor: 'pointer', boxSizing: 'border-box',
+                position: 'relative', minHeight: 66, padding: '8px 2px 4px', overflow: 'hidden', borderRadius: 6, cursor: 'pointer', boxSizing: 'border-box',
                 background: HOUSE[holder]?.bg ?? '#eef2f7',
                 border: '1px solid #e3e8ef',
                 boxShadow: ring, opacity: inMonth ? 1 : extraWeek ? 0.7 : 0.4, color: '#223', font: 'inherit',
@@ -161,10 +152,12 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
               <div style={{ fontSize: monthStart ? 11 : 14, fontWeight: d === today ? 800 : 500, whiteSpace: 'nowrap' }}>
                 {monthStart ? short(d) : Number(d.slice(8))}
               </div>
-              <div style={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap', marginTop: 2 }}>
-                {dayEvents.slice(0, 3).map((e) => (
-                  <span key={e.id} style={{ width: 6, height: 6, borderRadius: 3, background: CAT[e.category] ?? CAT.other }} />
-                ))}
+              {dayEvents.some((e) => e.category === 'holiday' || e.category === 'school') && (
+                <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: CAT.holiday }} />
+              )}
+              <div style={{ display: 'flex', gap: 3, justifyContent: 'center', alignItems: 'center', marginTop: 2, minHeight: 14 }}>
+                {dayEvents.some((e) => e.category === 'trip') && <span aria-hidden="true" style={{ fontSize: 12, lineHeight: 1 }}>✈</span>}
+                {dayEvents.some((e) => e.category === 'other') && <span style={{ width: 6, height: 6, borderRadius: 3, background: CAT.other }} />}
               </div>
               {ribbons.map((s, k) => <Ribbon key={s.id} swap={s} d={d} index={k} />)}
             </button>
@@ -177,12 +170,12 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
           <span key={k}><span style={{ display: 'inline-block', width: 10, height: 10, background: v.bg, border: `1px solid ${v.edge}`, borderRadius: 2, marginRight: 4 }} />{householdLabel(k)}: <strong style={{ color: v.edge }}>{weeksOf(k)}</strong></span>
         ))}
         <span>Wk = week number</span>
-        <span><span style={{ display: 'inline-block', width: 18, height: 7, background: '#556', borderRadius: 3, marginRight: 4 }} />⇄ swap agreed</span>
-        <span><span style={{ display: 'inline-block', width: 18, height: 7, border: '2px dashed #556', boxSizing: 'border-box', borderRadius: 3, marginRight: 4 }} />? swap asked, waiting</span>
+        <span><span style={{ display: 'inline-block', width: 18, height: 8, background: '#556', borderRadius: 3, marginRight: 4 }} />swap agreed</span>
+        <span><span style={{ display: 'inline-block', width: 18, height: 8, background: 'repeating-linear-gradient(135deg, #556 0 3px, transparent 3px 6px)', border: '1px solid #556', boxSizing: 'border-box', borderRadius: 3, marginRight: 4 }} />swap asked, waiting</span>
         <span><span style={{ display: 'inline-block', width: 10, height: 10, border: `3px solid ${HOLSWAP}`, boxSizing: 'border-box', borderRadius: 2, marginRight: 4 }} />swap during a holiday or no-school day</span>
-        {Object.entries(CAT).map(([k, c]) => (
-          <span key={k}><span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: 3, background: c, marginRight: 4 }} />{categoryLabel(k)}</span>
-        ))}
+        <span><span style={{ display: 'inline-block', width: 18, height: 4, background: CAT.holiday, marginRight: 4, verticalAlign: 'middle' }} />holiday or no school</span>
+        <span>✈ trip</span>
+        <span><span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: 3, background: CAT.other, marginRight: 4 }} />other</span>
       </div>
 
       {sel && (
