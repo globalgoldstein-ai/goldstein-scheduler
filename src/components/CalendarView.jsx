@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 4 | Build 3 | 2026-10-25 15:56 ET | calendar: taller cells, striped/solid swap ribbons (no badges), holiday top bar, trip plane icon
+// Goldstein Scheduler | Phase 11 | Session 5 | Build 1 | 2026-10-25 16:13 ET | calendar: tap-to-select mode (pick/pickOk/onPickDay), day sheet 'Ask for days from here'
 import { useState, useEffect } from 'react';
 import { parseDate, effectiveHousehold, householdLabel, isoWeek, defaultHousehold, ruleFor } from '../lib/schedule.js';
 import { isHolidayEvent } from '../lib/conflicts.js';
@@ -64,7 +64,9 @@ function Ribbon({ swap, d, index }) {
 
 const navBtn = { padding: '6px 12px', fontSize: 14, borderRadius: 8, border: '1px solid #ccd', background: '#fff', color: '#334', fontWeight: 600 };
 
-export default function CalendarView({ swaps = [], events = [], label = 'Calendar', storageKey = 'gs.calendarMonth', jumpTo = null }) {
+// Select mode: the parent owns `pick` ({ start, end }), `pickOk(date)` says which days can be tapped and
+// `onPickDay(date)` receives taps. Outside select mode, `onAskFrom(date)` adds a button to the day sheet.
+export default function CalendarView({ swaps = [], events = [], label = 'Calendar', storageKey = 'gs.calendarMonth', jumpTo = null, pick = null, pickOk = null, onPickDay = null, onAskFrom = null }) {
   const today = new Date().toLocaleDateString('en-CA'); // local YYYY-MM-DD
   const [ym, setYm] = useState(() => loadYm(storageKey, today));
   const [sel, setSel] = useState(null);
@@ -85,7 +87,9 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
     setYm({ y: d.getUTCFullYear(), m: d.getUTCMonth() });
     setSel(null);
   };
-  const goToday = () => { const [y, m] = today.split('-').map(Number); setYm({ y, m: m - 1 }); setSel(today); };
+  const goToday = () => { const [y, m] = today.split('-').map(Number); setYm({ y, m: m - 1 }); if (!pick) setSel(today); };
+  const picking = !!pick;
+  useEffect(() => { if (picking) setSel(null); }, [picking]);
 
   const info = (d) => {
     const dayEvents = events.filter((e) => inRange(d, e.date_start, e.date_end));
@@ -102,7 +106,7 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
   const rule = ruleFor(iso(new Date(Date.UTC(ym.y, ym.m, 1))));
   const weeksOf = (h) => (rule.oddWeek === h ? 'odd weeks' : 'even weeks');
   const title = new Date(Date.UTC(ym.y, ym.m, 1)).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-  const sInfo = sel ? info(sel) : null;
+  const sInfo = sel && !picking ? info(sel) : null;
 
   return (
     <div style={{ marginTop: 20 }} role="group" aria-label={label}>
@@ -122,7 +126,9 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
           const { dayEvents, daySwaps, agreedSwap, holder, holidaySwap } = info(d);
           const inMonth = Number(d.slice(5, 7)) - 1 === ym.m;
           const extraWeek = i >= monthRows * 7;
-          const outer = d === sel ? '0 0 0 2px #1565c0' : d === today ? '0 0 0 2px #263238' : null;
+          const canTap = !picking || (pickOk ? pickOk(d) : true);
+          const picked = picking && pick.start && d >= pick.start && d <= (pick.end ?? pick.start);
+          const outer = picked ? '0 0 0 2px #1565c0' : d === sel && !picking ? '0 0 0 2px #1565c0' : d === today ? '0 0 0 2px #263238' : null;
           const ring = [outer, holidaySwap ? `inset 0 0 0 3px ${HOLSWAP}` : null].filter(Boolean).join(', ') || 'none';
           const ribbons = [...daySwaps].sort((a, b) => (a.status === 'agreed' ? -1 : 1) - (b.status === 'agreed' ? -1 : 1)).slice(0, 2);
           const monthStart = d.slice(8) === '01' && !inMonth;
@@ -139,14 +145,16 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
           return [divider, weekCell, (
             <button
               key={d}
-              onClick={() => setSel(sel === d ? null : d)}
-              aria-label={`${fmt(d)}, with ${householdLabel(holder)}${agreedSwap ? ', swap' : ''}${holidaySwap ? ', holiday swap' : ''}`}
-              aria-pressed={d === sel}
+              onClick={() => (picking ? onPickDay?.(d) : setSel(sel === d ? null : d))}
+              disabled={!canTap}
+              aria-label={`${fmt(d)}, with ${householdLabel(holder)}${agreedSwap ? ', swap' : ''}${holidaySwap ? ', holiday swap' : ''}${picked ? ', selected' : ''}`}
+              aria-pressed={picking ? !!picked : d === sel}
               style={{
-                position: 'relative', minHeight: 66, padding: '8px 2px 4px', overflow: 'hidden', borderRadius: 6, cursor: 'pointer', boxSizing: 'border-box',
+                position: 'relative', minHeight: 66, padding: '8px 2px 4px', overflow: 'hidden', borderRadius: 6, boxSizing: 'border-box',
                 background: HOUSE[holder]?.bg ?? '#eef2f7',
                 border: '1px solid #e3e8ef',
-                boxShadow: ring, opacity: inMonth ? 1 : extraWeek ? 0.7 : 0.4, color: '#223', font: 'inherit',
+                boxShadow: ring, opacity: !canTap ? 0.2 : inMonth ? 1 : extraWeek ? 0.7 : 0.4, color: '#223', font: 'inherit',
+                cursor: canTap ? 'pointer' : 'not-allowed',
               }}
             >
               <div style={{ fontSize: monthStart ? 11 : 14, fontWeight: d === today ? 800 : 500, whiteSpace: 'nowrap' }}>
@@ -160,6 +168,16 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
                 {dayEvents.some((e) => e.category === 'other') && <span style={{ width: 6, height: 6, borderRadius: 3, background: CAT.other }} />}
               </div>
               {ribbons.map((s, k) => <Ribbon key={s.id} swap={s} d={d} index={k} />)}
+              {picked && (
+                <>
+                  <span aria-hidden="true" style={{ position: 'absolute', inset: 0, zIndex: 2, background: 'rgba(21,101,192,0.22)', pointerEvents: 'none' }} />
+                  {(d === pick.start || d === (pick.end ?? pick.start)) && (
+                    <span aria-hidden="true" style={{ position: 'absolute', top: 2, right: 3, zIndex: 3, fontSize: 9, fontWeight: 800, color: '#0d47a1', pointerEvents: 'none' }}>
+                      {pick.start === (pick.end ?? pick.start) ? 'only day' : d === pick.start ? 'start' : 'end'}
+                    </span>
+                  )}
+                </>
+              )}
             </button>
           )];
         })}
@@ -178,7 +196,7 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
         <span><span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: 3, background: CAT.other, marginRight: 4 }} />other</span>
       </div>
 
-      {sel && (
+      {sel && sInfo && (
         <div style={{ marginTop: 10, padding: 12, border: '1px solid #d7dee8', borderRadius: 8, fontSize: 14 }}>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>{fmt(sel)}</div>
           <div>With <strong>{householdLabel(sInfo.holder)}</strong>{sInfo.agreedSwap ? ' (agreed swap)' : ` (regular schedule, week ${isoWeek(sel)})`}</div>
@@ -195,6 +213,12 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
           ))}
           {sInfo.holidaySwap && <div style={{ marginTop: 6, color: HOLSWAP, fontSize: 13 }}>This swap falls on a holiday or no-school day. That's allowed; it's counted in the Holiday swaps total.</div>}
           {!sInfo.daySwaps.length && !sInfo.dayEvents.length && <div style={{ fontSize: 13, color: '#889', marginTop: 4 }}>Nothing else scheduled.</div>}
+          {onAskFrom && (
+            <button onClick={() => onAskFrom(sel)}
+              style={{ marginTop: 10, padding: '10px 16px', minHeight: 44, fontSize: 14, borderRadius: 8, border: '1px solid #2e7d32', background: '#fff', color: '#2e7d32', fontWeight: 600, cursor: 'pointer' }}>
+              Ask for days from here
+            </button>
+          )}
         </div>
       )}
     </div>

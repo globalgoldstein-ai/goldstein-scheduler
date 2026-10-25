@@ -1,18 +1,18 @@
-// Goldstein Scheduler | Phase 11 | Session 4 | Build 1 | 2026-10-24 14:50 ET | dashboard: balance + holiday tally + schedule/holidays views + holiday swaps + trades + withdraw + write UI + draft button
-import { useState } from 'react';
+// Goldstein Scheduler | Phase 11 | Session 5 | Build 1 | 2026-10-25 16:13 ET | dashboard: balance + holiday tally + schedule/holidays views + holiday swaps + trades + withdraw + tap-to-select swaps/returns + draft button
+import { useState, useRef } from 'react';
 import { useData } from '../hooks/useData.js';
 import { swapBalance, householdLabel } from '../lib/schedule.js';
 import { holidayTally, trackingSince } from '../lib/tally.js';
 import { categoryLabel, kidLabel } from '../lib/labels.js';
-import { suggestAlternate } from '../lib/suggest.js';
+import { suggestAlternate, suggestReturn } from '../lib/suggest.js';
+import { dayOk, rangeProblem } from '../lib/pick.js';
 import { updateStatus, updateTradeStatus, withdrawSwap } from '../lib/mutations.js';
 import { groupSwaps } from '../lib/trades.js';
 import BalanceTile from '../components/BalanceTile.jsx';
 import CalendarView from '../components/CalendarView.jsx';
 import HolidaysView from '../components/HolidaysView.jsx';
-import SwapForm from '../components/SwapForm.jsx';
+import { PickBanner, PickBar } from '../components/PickControls.jsx';
 import EventForm from '../components/EventForm.jsx';
-import TradeForm from '../components/TradeForm.jsx';
 
 const ACTORS = ['aaron', 'rebecca', 'lisa'];
 const householdOf = (a) => (a === 'lisa' ? 'lisa' : 'aaron_rebecca');
@@ -136,9 +136,31 @@ export default function Dashboard() {
   const [actor, setActor] = useState('aaron');
   const [tab, setTab] = useState(null); // 'swap' | 'event' | null
   const [view, setView] = useState('schedule'); // 'schedule' | 'holidays'
-  const [tradeFor, setTradeFor] = useState(null); // swap id with the trade form open
+  const [pick, setPick] = useState(null); // tap-to-select: { kind: 'ask'|'return', original?, start, end, suggested, err }
+  const calRef = useRef(null);
   const [jumpTo, setJumpTo] = useState(null); // 'YYYY-MM-DD#n': calendar shows this month after a save
   const saved = (date) => { if (date) setJumpTo(`${date}#${Date.now()}`); refetch(); };
+
+  // Start select mode on the Schedule calendar and bring it into view.
+  const beginPick = (next, month) => {
+    setTab(null);
+    setView('schedule');
+    setPick(next);
+    if (month) setJumpTo(`${month}#${Date.now()}`);
+    setTimeout(() => calRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }), 60);
+  };
+  const beginAsk = (date = null) => beginPick({ kind: 'ask', start: date, end: null, suggested: false, err: null }, date);
+  const beginReturn = (swap) => {
+    const today = new Date().toLocaleDateString('en-CA');
+    const s = suggestReturn(swap, { swaps, events, today });
+    beginPick({ kind: 'return', original: swap, start: s?.date_start ?? null, end: s?.date_end ?? null, suggested: !!s, err: null }, s?.date_start ?? swap.date_start);
+  };
+  const tapDay = (d) => setPick((p) => {
+    if (!p) return p;
+    if (!p.start || p.end || d < p.start) return { ...p, start: d, end: null, suggested: false, err: null };
+    const bad = rangeProblem(p, p.start, d);
+    return bad ? { ...p, err: bad } : { ...p, end: d, suggested: false, err: null };
+  });
 
   if (loading) return <p style={{ padding: 24 }}>Loading…</p>;
   if (error) return <p style={{ padding: 24, color: '#c00' }}>Error: {error}</p>;
@@ -211,7 +233,7 @@ export default function Dashboard() {
 
       <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
         {[['schedule', 'Schedule'], ['holidays', 'Holidays']].map(([k, label]) => (
-          <button key={k} onClick={() => setView(k)} aria-pressed={view === k}
+          <button key={k} onClick={() => { setView(k); if (k !== 'schedule') setPick(null); }} aria-pressed={view === k}
             style={{ padding: '8px 16px', fontSize: 14, borderRadius: 8, fontWeight: 600, cursor: 'pointer',
               border: '1px solid #263238', background: view === k ? '#263238' : '#fff', color: view === k ? '#fff' : '#263238' }}>
             {label}
@@ -219,22 +241,28 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {view === 'schedule'
-        ? <CalendarView swaps={swaps} events={events} jumpTo={jumpTo} />
-        : <HolidaysView swaps={swaps} events={events} />}
+      {view === 'schedule' ? (
+        <div ref={calRef} style={{ scrollMarginTop: 8 }}>
+          {pick && <PickBanner pick={pick} />}
+          <CalendarView swaps={swaps} events={events} jumpTo={jumpTo}
+            pick={pick} pickOk={(d) => dayOk(pick, d)} onPickDay={tapDay}
+            onAskFrom={pick ? null : beginAsk} />
+          {pick && <PickBar pick={pick} setPick={setPick} actor={actor} onCancel={() => setPick(null)}
+            onDone={(d) => { setPick(null); saved(d); }} />}
+        </div>
+      ) : <HolidaysView swaps={swaps} events={events} />}
 
       <div style={{ display: 'flex', gap: 8, margin: '20px 0 16px' }}>
-        <button onClick={() => setTab(tab === 'swap' ? null : 'swap')}
-          style={{ padding: '10px 16px', fontSize: 14, borderRadius: 8, border: '1px solid #2e7d32', background: tab === 'swap' ? '#2e7d32' : '#fff', color: tab === 'swap' ? '#fff' : '#2e7d32', fontWeight: 600 }}>
-          + Swap
+        <button onClick={() => (pick?.kind === 'ask' ? setPick(null) : beginAsk())}
+          style={{ padding: '10px 16px', minHeight: 44, fontSize: 14, borderRadius: 8, border: '1px solid #2e7d32', background: pick?.kind === 'ask' ? '#2e7d32' : '#fff', color: pick?.kind === 'ask' ? '#fff' : '#2e7d32', fontWeight: 600 }}>
+          Ask for days
         </button>
-        <button onClick={() => setTab(tab === 'event' ? null : 'event')}
+        <button onClick={() => { setPick(null); setTab(tab === 'event' ? null : 'event'); }}
           style={{ padding: '10px 16px', fontSize: 14, borderRadius: 8, border: '1px solid #1565c0', background: tab === 'event' ? '#1565c0' : '#fff', color: tab === 'event' ? '#fff' : '#1565c0', fontWeight: 600 }}>
           + Event
         </button>
       </div>
 
-      {tab === 'swap' && <SwapForm actor={actor} onDone={(d) => { setTab(null); saved(d); }} />}
       {tab === 'event' && <EventForm actor={actor} onDone={(d) => { setTab(null); saved(d); }} />}
 
       <h2 style={{ fontSize: 16, margin: '24px 0 4px' }}>
@@ -259,16 +287,11 @@ export default function Dashboard() {
             <div key={g.key}>
               <Row row={s} table="swaps"
                 label={`${householdLabel(s.default_parent)} → ${householdLabel(s.receiving_parent)}`} />
-              {s.status !== 'needs_discussion' && tradeFor !== s.id && (
-                <button onClick={() => setTradeFor(s.id)}
+              {s.status !== 'needs_discussion' && !(pick?.kind === 'return' && pick.original.id === s.id) && (
+                <button onClick={() => beginReturn(s)}
                   style={{ margin: '-2px 0 10px', padding: '6px 12px', fontSize: 13, borderRadius: 6, border: '1px solid #00695c', background: '#fff', color: '#00695c', fontWeight: 600 }}>
                   ⇄ Add the other side (trade)
                 </button>
-              )}
-              {tradeFor === s.id && (
-                <TradeForm swap={s} swaps={swaps} events={events} actor={actor}
-                  onCancel={() => setTradeFor(null)}
-                  onDone={(d) => { setTradeFor(null); saved(d); }} />
               )}
             </div>
           );
