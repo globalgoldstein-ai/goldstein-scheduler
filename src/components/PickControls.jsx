@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 5 | Build 3 | 2026-10-25 16:44 ET | tap-to-select banner and confirm bar for swaps, trade returns and swap edits
+// Goldstein Scheduler | Phase 11 | Session 5 | Build 4 | 2026-10-25 16:51 ET | tap-to-select banner and confirm bar for swaps, trade returns and swap edits
 import { useState } from 'react';
 import { createSwap, createTrade, updateSwap } from '../lib/mutations.js';
 import { householdLabel, parseDate } from '../lib/schedule.js';
@@ -13,8 +13,13 @@ const btn = { padding: '10px 16px', minHeight: 44, fontSize: 15, borderRadius: 8
 export function PickBanner({ pick }) {
   const ask = pick.kind === 'ask';
   const need = holderNeeded(pick);
+  const nowSpan = pick.kind === 'edit'
+    ? (pick.original.date_start === pick.original.date_end ? nice(pick.original.date_start) : `${nice(pick.original.date_start)} – ${nice(pick.original.date_end)}`)
+    : null;
   const msg = pick.suggested && pick.start && pick.end
-    ? (pick.kind === 'edit' ? 'The current days are selected. Tap any day to choose different ones.' : 'Suggested days are selected. Tap any day to choose different ones.')
+    ? (pick.kind === 'edit'
+      ? `You're changing ${nowSpan}. Tap the new first day, then the new last day. Or leave the days and just change the note below.`
+      : 'Suggested days are selected. Tap any day to choose different ones.')
     : !pick.start
       ? (ask ? 'Tap the first day.' : 'Tap the first day to give back.')
       : !pick.end
@@ -27,7 +32,7 @@ export function PickBanner({ pick }) {
     : need && !pick.end ? `Greyed days aren't ${householdLabel(need)}'s by default, so they can't be in the same request.` : null;
   return (
     <div role="status" style={{ marginTop: 12, padding: '10px 12px', borderRadius: 8, background: '#e3f2fd', border: '1px solid #90caf9', color: '#0d47a1', fontSize: 14 }}>
-      <strong>{pick.kind === 'edit' ? 'Edit swap: ' : pick.kind === 'return' ? 'Give days back: ' : 'Ask for days: '}</strong>{msg}
+      <strong>{pick.kind === 'edit' ? 'Change swap: ' : pick.kind === 'return' ? 'Give days back: ' : 'Ask for days: '}</strong>{msg}
       {why && <div style={{ fontSize: 12, color: '#37627f', marginTop: 4 }}>{why}</div>}
     </div>
   );
@@ -79,12 +84,16 @@ export function PickBar({ pick, setPick, actor, onCancel, onDone }) {
               Changing the days is a new ask: {householdLabel(otherHousehold(asker))} will need to agree again.
             </div>
           )}
-          {edit && !datesChanged && !notesChanged && <div style={{ fontSize: 13, color: '#889', margin: '0 0 8px' }}>No changes yet.</div>}
+          {edit && (
+            <div style={{ fontSize: 13, color: '#889', margin: '0 0 8px' }}>
+              {datesChanged || notesChanged ? `Was: ${nice(pick.original.date_start)}${pick.original.date_start === pick.original.date_end ? '' : ` – ${nice(pick.original.date_end)}`}.` : 'Nothing changed yet. Tap new days on the calendar, or edit the note.'}
+            </div>
+          )}
           <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} style={box} />
         </>
       ) : (
         <div style={{ fontSize: 14, color: '#556' }}>
-          {pick.start ? `First day: ${nice(pick.start)}. Tap the last day.` : 'No days picked yet.'}
+          <strong>{pick.start ? 'Step 2 of 2' : 'Step 1 of 2'}</strong>{pick.start ? ` · First day ${nice(pick.start)}. Now tap the last day (or the same day again).` : ' · Tap the first day on the calendar.'}
         </div>
       )}
       {pick.err && <p role="alert" style={{ color: '#c00', fontSize: 13, margin: '8px 0 0' }}>{pick.err}</p>}

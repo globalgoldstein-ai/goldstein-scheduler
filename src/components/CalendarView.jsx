@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 5 | Build 1 | 2026-10-25 16:13 ET | calendar: tap-to-select mode (pick/pickOk/onPickDay), day sheet 'Ask for days from here'
+// Goldstein Scheduler | Phase 11 | Session 5 | Build 4 | 2026-10-25 16:51 ET | calendar: tap-to-select mode (pick/pickOk/onPickDay), day sheet 'Ask for days from here'
 import { useState, useEffect } from 'react';
 import { parseDate, effectiveHousehold, householdLabel, isoWeek, defaultHousehold, ruleFor } from '../lib/schedule.js';
 import { isHolidayEvent } from '../lib/conflicts.js';
@@ -66,7 +66,7 @@ const navBtn = { padding: '6px 12px', fontSize: 14, borderRadius: 8, border: '1p
 
 // Select mode: the parent owns `pick` ({ start, end }), `pickOk(date)` says which days can be tapped and
 // `onPickDay(date)` receives taps. Outside select mode, `onAskFrom(date)` adds a button to the day sheet.
-export default function CalendarView({ swaps = [], events = [], label = 'Calendar', storageKey = 'gs.calendarMonth', jumpTo = null, pick = null, pickOk = null, onPickDay = null, onAskFrom = null }) {
+export default function CalendarView({ swaps = [], events = [], label = 'Calendar', storageKey = 'gs.calendarMonth', jumpTo = null, pick = null, pickOk = null, onPickDay = null, onAskFrom = null, onEditSwap = null }) {
   const today = new Date().toLocaleDateString('en-CA'); // local YYYY-MM-DD
   const [ym, setYm] = useState(() => loadYm(storageKey, today));
   const [sel, setSel] = useState(null);
@@ -165,17 +165,18 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
               )}
               <div style={{ display: 'flex', gap: 3, justifyContent: 'center', alignItems: 'center', marginTop: 2, minHeight: 14 }}>
                 {dayEvents.some((e) => e.category === 'trip') && <span aria-hidden="true" style={{ fontSize: 12, lineHeight: 1 }}>✈</span>}
+                {picked && (d === pick.start || d === (pick.end ?? pick.start)) && (
+                  <span aria-hidden="true" style={{ position: 'relative', zIndex: 3, fontSize: 9, fontWeight: 800, color: '#0d47a1', whiteSpace: 'nowrap' }}>
+                    {pick.start === (pick.end ?? pick.start) ? '1 day' : d === pick.start ? 'start' : 'end'}
+                  </span>
+                )}
                 {dayEvents.some((e) => e.category === 'other') && <span style={{ width: 6, height: 6, borderRadius: 3, background: CAT.other }} />}
               </div>
               {ribbons.map((s, k) => <Ribbon key={s.id} swap={s} d={d} index={k} />)}
               {picked && (
                 <>
                   <span aria-hidden="true" style={{ position: 'absolute', inset: 0, zIndex: 2, background: 'rgba(21,101,192,0.22)', pointerEvents: 'none' }} />
-                  {(d === pick.start || d === (pick.end ?? pick.start)) && (
-                    <span aria-hidden="true" style={{ position: 'absolute', top: 2, right: 3, zIndex: 3, fontSize: 9, fontWeight: 800, color: '#0d47a1', pointerEvents: 'none' }}>
-                      {pick.start === (pick.end ?? pick.start) ? 'only day' : d === pick.start ? 'start' : 'end'}
-                    </span>
-                  )}
+
                 </>
               )}
             </button>
@@ -203,6 +204,12 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
           {sInfo.daySwaps.map((s) => (
             <div key={s.id} style={{ fontSize: 13, color: '#556', marginTop: 4 }}>
               ⇄ {householdLabel(s.receiving_parent)} take{s.receiving_parent === 'lisa' ? 's' : ''} Zoe {span(s.date_start, s.date_end)} ({householdLabel(s.default_parent)}'s week) · {s.status === 'agreed' ? 'agreed' : s.status === 'proposed' ? 'asked, waiting' : 'needs discussion'}
+              {onEditSwap && (
+                <button onClick={() => onEditSwap(s)}
+                  style={{ display: 'block', marginTop: 6, padding: '8px 14px', minHeight: 44, fontSize: 14, borderRadius: 8, border: '1px solid #1565c0', background: '#fff', color: '#1565c0', fontWeight: 600, cursor: 'pointer' }}>
+                  Change this swap
+                </button>
+              )}
             </div>
           ))}
           {sInfo.dayEvents.map((e) => (

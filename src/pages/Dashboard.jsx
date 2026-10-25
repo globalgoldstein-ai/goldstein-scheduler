@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 5 | Build 3 | 2026-10-25 16:44 ET | dashboard: balance + holiday tally + schedule/holidays/history views + holiday swaps + trades + withdraw + edit swap + tap-to-select + draft button
+// Goldstein Scheduler | Phase 11 | Session 5 | Build 4 | 2026-10-25 16:51 ET | dashboard: balance + holiday tally + schedule/holidays/history views + holiday swaps + trades + withdraw + edit swap + tap-to-select + draft button
 import { useState, useRef } from 'react';
 import { useData } from '../hooks/useData.js';
 import { swapBalance, householdLabel } from '../lib/schedule.js';
@@ -207,7 +207,7 @@ export default function Dashboard() {
   const editBtn = (row) => (
     <button onClick={() => beginEdit(row)}
       style={{ marginLeft: 8, padding: '6px 12px', minHeight: 36, fontSize: 13, borderRadius: 6, border: '1px solid #1565c0', background: '#fff', color: '#1565c0', fontWeight: 600 }}>
-      Edit
+      Change
     </button>
   );
 
@@ -230,7 +230,8 @@ export default function Dashboard() {
 
   return (
     <div style={{ padding: 24, fontFamily: 'system-ui, sans-serif', maxWidth: 720 }}>
-      <h1 style={{ fontSize: 22, marginBottom: 12 }}>Goldstein Kids Scheduler</h1>
+      <h1 style={{ fontSize: 22, margin: '0 0 2px' }}>Goldstein Kids Scheduler</h1>
+      <p style={{ fontSize: 12, color: '#778', margin: '0 0 12px' }}>{versionLabel()}</p>
 
       <div style={{ marginBottom: 16 }}>
         <label style={{ fontSize: 12, color: '#667', marginRight: 8 }}>I am:</label>
@@ -257,7 +258,7 @@ export default function Dashboard() {
           {pick && <PickBanner pick={pick} />}
           <CalendarView swaps={swaps} events={events} jumpTo={jumpTo}
             pick={pick} pickOk={(d) => dayOk(pick, d)} onPickDay={tapDay}
-            onAskFrom={pick ? null : beginAsk} />
+            onAskFrom={pick ? null : beginAsk} onEditSwap={pick ? null : beginEdit} />
           {pick && <PickBar key={`${pick.kind}-${pick.original?.id ?? ''}`} pick={pick} setPick={setPick} actor={actor} onCancel={() => setPick(null)}
             onDone={(d) => { setPick(null); saved(d); }} />}
         </div>
@@ -331,8 +332,6 @@ export default function Dashboard() {
       {events.map((e) => (
         <Row key={e.id} row={e} table="events" label={`${e.title} (${categoryLabel(e.category)}${e.kid === 'zoe' ? '' : `, ${kidLabel(e.kid)}`})`} />
       ))}
-
-      <p style={{ fontSize: 11, color: '#99a', margin: '32px 0 0', textAlign: 'center' }}>{versionLabel()}</p>
     </div>
   );
 }
