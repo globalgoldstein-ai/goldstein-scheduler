@@ -1,6 +1,6 @@
-// Goldstein Scheduler | Phase 9 | Session 3 | Build 2 | 2026-10-24 13:44 ET | holiday swap detection (was: conflict detection)
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 2 | 2026-10-25 20:38 ET | holiday swap detection: a borrowed day must fall on the holiday
 
-import { parseDate, householdLabel } from './schedule.js';
+import { parseDate, householdLabel, borrowedDays } from './schedule.js';
 import { categoryLabel } from './labels.js';
 
 const inclusiveDays = (start, end) =>
@@ -11,11 +11,12 @@ export function rangesOverlap(aStart, aEnd, bStart, bEnd) {
   return parseDate(aStart) <= parseDate(bEnd) && parseDate(bStart) <= parseDate(aEnd);
 }
 
-function overlapDays(swap, ev) {
+function overlapRange(swap, ev) {
   const start = parseDate(swap.date_start) > parseDate(ev.date_start) ? swap.date_start : ev.date_start;
   const end = parseDate(swap.date_end) < parseDate(ev.date_end) ? swap.date_end : ev.date_end;
-  return inclusiveDays(start, end);
+  return { start, end };
 }
+const overlapDays = (swap, ev) => { const r = overlapRange(swap, ev); return inclusiveDays(r.start, r.end); };
 
 // A holiday or no-school day that can affect Zoe's custody. Noah's own
 // (college) breaks are shown in the app but never count toward Zoe's swaps.
@@ -33,6 +34,9 @@ export function detectConflicts(swaps = [], events = []) {
     if (swap.status !== 'agreed') continue;
     for (const ev of flagged) {
       if (rangesOverlap(swap.date_start, swap.date_end, ev.date_start, ev.date_end)) {
+        // Only a holiday swap if a day the swap BORROWS falls on it (own days on a holiday are not a swap).
+        const r = overlapRange(swap, ev);
+        if (borrowedDays(r.start, r.end, swap.receiving_parent) === 0) continue;
         out.push({
           swap,
           event: ev,

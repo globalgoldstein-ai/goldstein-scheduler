@@ -1,15 +1,15 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 1 | 2026-10-25 17:14 ET | one sticky panel above the calendar: short steps, summary, notes, Ask/Save/Give back + Cancel
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 2 | 2026-10-25 20:38 ET | one sticky panel above the calendar: short steps, summary, borrowed-days note, notes, Ask/Save + Cancel
 import { useState } from 'react';
-import { createSwap, createTrade, updateSwap } from '../lib/mutations.js';
+import { createSwap, updateSwap } from '../lib/mutations.js';
 import { householdLabel, parseDate } from '../lib/schedule.js';
-import { dayCount, otherHousehold, rangeProblem, receivingFor } from '../lib/pick.js';
+import { borrowedIn, dayCount, otherHousehold, rangeProblem, receivingFor } from '../lib/pick.js';
 
 const nice = (s) => parseDate(s).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
 const spanOf = (a, b) => (a === b ? nice(a) : `${nice(a)} – ${nice(b)}`);
 const days = (n) => `${n} day${n === 1 ? '' : 's'}`;
 const box = { width: '100%', padding: 10, fontSize: 16, borderRadius: 8, border: '1px solid #ccd', boxSizing: 'border-box' };
 const btn = { padding: '10px 16px', minHeight: 44, fontSize: 15, borderRadius: 8, fontWeight: 600, cursor: 'pointer' };
-const TITLE = { ask: 'Ask for days', return: 'Give days back', edit: 'Change swap' };
+const TITLE = { ask: 'Ask for days', edit: 'Change swap' };
 
 // Declared at module scope so typing in Notes does not remount the panel.
 // Sits ABOVE the calendar and sticks to the top of the screen, so what a tap did is always visible.
@@ -25,11 +25,13 @@ export default function PickPanel({ pick, setPick, actor, onCancel, onDone }) {
   const nothing = edit && !datesChanged && !notesChanged;
   const needsAgain = datesChanged && pick.original.status !== 'proposed';
   const asker = actor === 'lisa' ? 'lisa' : 'aaron_rebecca';
+  const total = done ? dayCount(pick.start, pick.end) : 0;
+  const borrowed = done ? borrowedIn(pick, pick.start, pick.end) : 0;
   const was = edit ? spanOf(pick.original.date_start, pick.original.date_end) : null;
 
   // The one short sentence that tells you what to do next.
   const step = !pick.start
-    ? (edit ? 'Tap the new first day.' : pick.kind === 'return' ? 'Tap the first day to give back.' : 'Tap the first day.')
+    ? (edit ? 'Tap the new first day.' : 'Tap the first day.')
     : !pick.end
       ? 'Tap the last day. (One day? Tap it again.)'
       : edit && nothing
@@ -43,9 +45,7 @@ export default function PickPanel({ pick, setPick, actor, onCancel, onDone }) {
     const dates = { date_start: pick.start, date_end: pick.end, notes };
     const { error } = edit
       ? await updateSwap(pick.original, dates, actor)
-      : ask
-        ? await createSwap({ ...dates, receiving_parent: recv, status: 'proposed', proposed_by: actor }, actor)
-        : await createTrade(pick.original, dates, actor);
+      : await createSwap({ ...dates, receiving_parent: recv, status: 'proposed', proposed_by: actor }, actor);
     setBusy(false);
     if (error) return setPick({ ...pick, err: error.message });
     onDone(pick.start);
@@ -67,8 +67,8 @@ export default function PickPanel({ pick, setPick, actor, onCancel, onDone }) {
           </div>
           <div style={{ fontSize: 13, color: '#556', margin: '2px 0 6px' }}>
             {householdLabel(recv)} would have Zoe.
-            {pick.kind === 'return' && ` The first side was ${days(dayCount(pick.original.date_start, pick.original.date_end))}.`}
             {edit && datesChanged && ` Was: ${was}.`}
+            {borrowed < total && ` ${borrowed} of ${total} days are ${householdLabel(otherHousehold(recv))}'s and count toward the swap balance.`}
           </div>
           {needsAgain && (
             <div style={{ fontSize: 13, color: '#b26a00', margin: '0 0 6px' }}>
@@ -82,8 +82,8 @@ export default function PickPanel({ pick, setPick, actor, onCancel, onDone }) {
       {pick.err && <p role="alert" style={{ color: '#c00', fontSize: 13, margin: '8px 0 0' }}>{pick.err}</p>}
       <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
         <button onClick={submit} disabled={blocked}
-          style={{ ...btn, border: 0, background: edit ? '#1565c0' : ask ? '#2e7d32' : '#00695c', color: '#fff', opacity: blocked ? 0.5 : 1 }}>
-          {busy ? 'Saving…' : edit ? 'Save' : ask ? 'Ask' : 'Give back'}
+          style={{ ...btn, border: 0, background: edit ? '#1565c0' : '#2e7d32', color: '#fff', opacity: blocked ? 0.5 : 1 }}>
+          {busy ? 'Saving…' : edit ? 'Save' : 'Ask'}
         </button>
         <button onClick={() => setPick({ ...pick, start: null, end: null, suggested: false, err: null })} disabled={busy || !pick.start}
           style={{ ...btn, border: '1px solid #99a', background: '#fff', color: '#445', opacity: !pick.start ? 0.5 : 1 }}>Start over</button>

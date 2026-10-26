@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 1 | 2026-10-25 17:14 ET | calendar: 3-item legend, plain status words, marker hints in the day sheet
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 2 | 2026-10-25 20:38 ET | calendar: 4-item legend (red bar back), day sheet without 'week' wording
 import { useState, useEffect } from 'react';
 import { parseDate, effectiveHousehold, householdLabel, isoWeek, defaultHousehold, ruleFor } from '../lib/schedule.js';
 import { isHolidayEvent } from '../lib/conflicts.js';
@@ -96,10 +96,12 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
     const dayEvents = events.filter((e) => inRange(d, e.date_start, e.date_end));
     const daySwaps = swaps.filter((s) => inRange(d, s.date_start, s.date_end));
     const agreedSwap = daySwaps.some((s) => s.status === 'agreed');
+    // Only a day the receiver BORROWS counts as a holiday swap (a swap may also cover the receiver's own days).
+    const borrowedAgreed = daySwaps.some((s) => s.status === 'agreed' && defaultHousehold(d) !== s.receiving_parent);
     return {
       dayEvents, daySwaps, agreedSwap,
       holder: effectiveHousehold(d, swaps),
-      holidaySwap: agreedSwap && dayEvents.some(isHolidayEvent),
+      holidaySwap: borrowedAgreed && dayEvents.some(isHolidayEvent),
     };
   };
 
@@ -190,6 +192,7 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
           <span key={k}><span style={{ display: 'inline-block', width: 10, height: 10, background: v.bg, border: `1px solid ${v.edge}`, borderRadius: 2, marginRight: 4 }} />{householdLabel(k)}: <strong style={{ color: v.edge }}>{weeksOf(k)}</strong></span>
         ))}
         <span><span style={{ display: 'inline-block', width: 18, height: 8, background: 'repeating-linear-gradient(135deg, #556 0 3px, transparent 3px 6px)', border: '1px solid #556', boxSizing: 'border-box', borderRadius: 3, marginRight: 4, verticalAlign: 'middle' }} />striped = waiting · <span style={{ display: 'inline-block', width: 18, height: 8, background: '#556', borderRadius: 3, margin: '0 4px', verticalAlign: 'middle' }} />solid = agreed</span>
+        <span><span style={{ display: 'inline-block', width: 18, height: 4, background: CAT.holiday, marginRight: 4, verticalAlign: 'middle' }} />holiday or no school (tap the day)</span>
       </div>
 
       {sel && sInfo && (
@@ -198,7 +201,7 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
           <div>With <strong>{householdLabel(sInfo.holder)}</strong>{sInfo.agreedSwap ? ' (agreed swap)' : ` (regular schedule, week ${isoWeek(sel)})`}</div>
           {sInfo.daySwaps.map((s) => (
             <div key={s.id} style={{ fontSize: 13, color: '#556', marginTop: 4 }}>
-              ⇄ {householdLabel(s.receiving_parent)} take{s.receiving_parent === 'lisa' ? 's' : ''} Zoe {span(s.date_start, s.date_end)} ({householdLabel(s.default_parent)}'s week) · <strong>{statusText(s)}</strong>
+              ⇄ {householdLabel(s.receiving_parent)} take{s.receiving_parent === 'lisa' ? 's' : ''} Zoe {span(s.date_start, s.date_end)} · <strong>{statusText(s)}</strong>
               {onEditSwap && (
                 <button onClick={() => onEditSwap(s)}
                   style={{ display: 'block', marginTop: 6, padding: '8px 14px', minHeight: 44, fontSize: 14, borderRadius: 8, border: '1px solid #1565c0', background: '#fff', color: '#1565c0', fontWeight: 600, cursor: 'pointer' }}>

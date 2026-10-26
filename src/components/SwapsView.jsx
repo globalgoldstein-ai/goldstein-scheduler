@@ -1,6 +1,7 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 1 | 2026-10-25 17:14 ET | Swaps tab: one card per swap, one action chosen for the viewer; + Event lives here
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 2 | 2026-10-25 20:38 ET | Swaps tab: one card per swap; Change and Cancel swap for everyone (logged in History)
 import { useState } from 'react';
-import { parseDate, householdLabel } from '../lib/schedule.js';
+import { parseDate, householdLabel, borrowedDays } from '../lib/schedule.js';
+import { dayCount } from '../lib/pick.js';
 import { householdOf, statusText } from '../lib/people.js';
 import { tradePartner } from '../lib/trades.js';
 import EventForm from './EventForm.jsx';
@@ -16,33 +17,27 @@ function SwapCard({ swap, swaps, actor, past, on }) {
   const mine = householdOf(swap.proposed_by) === householdOf(actor); // my household asked
   const st = swap.status;
   const decide = !past && st !== 'agreed' && !mine; // Agree / Let's talk
-  const items = [];
-  if (!past) {
-    if (st === 'agreed') {
-      items.push(['Change', () => on.change(swap)]);
-      if (!swap.trade_id) items.push(['Give days back', () => on.giveBack(swap)]);
-    } else if (mine) {
-      items.push(['Change', () => on.change(swap)], ['Withdraw', () => on.withdraw(swap)]);
-    }
-  }
+  // Anyone can change or cancel any swap; every change is recorded in History.
+  const items = [['Change', () => on.change(swap)], ['Cancel swap', () => on.cancel(swap)]];
+  const total = dayCount(swap.date_start, swap.date_end);
+  const borrowed = borrowedDays(swap.date_start, swap.date_end, swap.receiving_parent);
   const t = tradePartner(swap, swaps);
   const verb = swap.receiving_parent === 'lisa' ? 'has' : 'have';
   const header = (
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
         <strong style={{ fontSize: 15 }}>{householdLabel(swap.receiving_parent)} {verb} Zoe</strong>
-        {items.length > 0 && <span aria-hidden="true" style={{ fontSize: 20, color: '#556', lineHeight: 1 }}>⋯</span>}
+        <span aria-hidden="true" style={{ fontSize: 20, color: '#556', lineHeight: 1 }}>⋯</span>
       </div>
       <div style={{ fontSize: 14, marginTop: 2 }}>{span(swap)}</div>
     </>
   );
   return (
     <div style={{ padding: 12, marginBottom: 8, border: '1px solid #e3e8ef', borderLeft: `5px solid ${TONE[st] ?? '#889'}`, borderRadius: 8, opacity: past ? 0.6 : 1 }}>
-      {items.length > 0
-        ? <button onClick={() => setOpen(!open)} aria-expanded={open} aria-label={`Options for ${span(swap)}`}
-            style={{ display: 'block', width: '100%', textAlign: 'left', padding: 0, border: 0, background: 'transparent', font: 'inherit', cursor: 'pointer', minHeight: 44 }}>{header}</button>
-        : header}
+      <button onClick={() => setOpen(!open)} aria-expanded={open} aria-label={`Options for ${span(swap)}`}
+        style={{ display: 'block', width: '100%', textAlign: 'left', padding: 0, border: 0, background: 'transparent', font: 'inherit', cursor: 'pointer', minHeight: 44 }}>{header}</button>
       <div style={{ fontSize: 13, marginTop: 4, color: TONE[st] ?? '#556', fontWeight: 700 }}>{statusText(swap)}</div>
+      {borrowed < total && <div style={{ fontSize: 12, color: '#667', marginTop: 2 }}>{borrowed} of {total} days borrowed (count toward the balance)</div>}
       {swap.notes && <div style={{ fontSize: 13, color: '#556', marginTop: 2 }}>“{swap.notes}”</div>}
       {t && <div style={{ fontSize: 12, color: '#00695c', marginTop: 4 }}>{t.isOriginal ? `Gives back ${span(t.partner)}` : `Given back for ${span(t.partner)}`}</div>}
       {decide && (
@@ -51,11 +46,11 @@ function SwapCard({ swap, swaps, actor, past, on }) {
           {st === 'proposed' && <button onClick={() => on.talk(swap)} style={{ ...btn, border: '1px solid #99a', background: '#fff', color: '#445' }}>Let's talk</button>}
         </div>
       )}
-      {open && items.length > 0 && (
+      {open && (
         <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
           {items.map(([label, fn]) => (
             <button key={label} onClick={() => { setOpen(false); fn(); }}
-              style={{ ...btn, border: `1px solid ${label === 'Withdraw' ? '#b71c1c' : '#1565c0'}`, background: '#fff', color: label === 'Withdraw' ? '#b71c1c' : '#1565c0' }}>
+              style={{ ...btn, border: `1px solid ${label === 'Cancel swap' ? '#b71c1c' : '#1565c0'}`, background: '#fff', color: label === 'Cancel swap' ? '#b71c1c' : '#1565c0' }}>
               {label}
             </button>
           ))}

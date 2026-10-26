@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 4 | Build 1 | 2026-10-24 14:50 ET | holidays and no-school days: list or calendar, with who has Zoe
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 2 | 2026-10-25 20:38 ET | holidays and no-school days: list or calendar, weekday names and days off, who has Zoe
 import { useState } from 'react';
 import { parseDate, effectiveHousehold, householdLabel } from '../lib/schedule.js';
 import { isHolidayEvent } from '../lib/conflicts.js';
@@ -10,7 +10,11 @@ const iso = (d) => d.toISOString().slice(0, 10);
 const short = (s) => parseDate(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 const dayName = (s) => parseDate(s).toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
 const monthName = (s) => parseDate(s).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-const range = (e) => (e.date_start === e.date_end ? `${dayName(e.date_start)} ${short(e.date_start)}` : `${short(e.date_start)} – ${short(e.date_end)}`);
+const dayLong = (s) => `${dayName(s)}, ${short(s)}`;
+const nDays = (e) => Math.round((parseDate(e.date_end) - parseDate(e.date_start)) / DAY) + 1;
+// e.g. "Wed, Nov 25 – Fri, Nov 27" and, on the next line, "3 days off".
+const range = (e) => (e.date_start === e.date_end ? dayLong(e.date_start) : `${dayLong(e.date_start)} – ${dayLong(e.date_end)}`);
+const daysOff = (e) => `${nDays(e)} day${nDays(e) === 1 ? '' : 's'} off`;
 
 // Who has Zoe across the event, in order, after agreed swaps. e.g. ['lisa'] or ['lisa', 'aaron_rebecca'].
 function holders(e, swaps) {
@@ -103,8 +107,8 @@ export default function HolidaysView({ swaps = [], events = [] }) {
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                       <strong>{e.title}</strong>
-                      <span style={{ color: '#556', whiteSpace: 'nowrap' }}>{range(e)}</span>
                     </div>
+                    <div style={{ fontSize: 14, color: '#334', marginTop: 2 }}>{range(e)} <span style={{ color: '#778' }}>· {daysOff(e)}</span></div>
                     <div style={{ marginTop: 4 }}>
                       {e.institution && <span style={ins ? chip(ins.bg, ins.fg) : chip('#eceff1', '#455a64')}>{e.institution}</span>}
                       <span style={e.category === 'holiday' ? chip('#ffebee', '#c62828') : chip('#e3f2fd', '#1565c0')}>{categoryLabel(e.category)}</span>

@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 1 | 2026-10-25 17:14 ET | home cards: "Right now" and "Needs your OK"
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 2 | 2026-10-25 20:38 ET | home cards: Right now and Needs your OK (Agree, Let's talk, Change)
 import { parseDate, householdLabel } from '../lib/schedule.js';
 import { rightNow } from '../lib/now.js';
 import { cap, householdOf, HOUSE_COLORS } from '../lib/people.js';
@@ -24,7 +24,7 @@ export function NowCard({ swaps, today }) {
 }
 
 // Requests from the OTHER household that still wait for an answer.
-export function NeedsOkCard({ swaps, actor, today, onAgree, onTalk }) {
+export function NeedsOkCard({ swaps, actor, today, onAgree, onTalk, onChange }) {
   const mine = householdOf(actor);
   const items = swaps.filter((s) => s.status === 'proposed' && householdOf(s.proposed_by) !== mine && s.date_end >= today);
   if (items.length === 0) return null;
@@ -42,6 +42,7 @@ export function NeedsOkCard({ swaps, actor, today, onAgree, onTalk }) {
           <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
             <button onClick={() => onAgree(s)} style={{ ...big, border: 0, background: '#2e7d32', color: '#fff' }}>Agree</button>
             <button onClick={() => onTalk(s)} style={{ ...big, border: '1px solid #99a', background: '#fff', color: '#445' }}>Let's talk</button>
+            <button onClick={() => onChange(s)} style={{ ...big, border: '1px solid #1565c0', background: '#fff', color: '#1565c0' }}>Change</button>
           </div>
         </div>
       ))}

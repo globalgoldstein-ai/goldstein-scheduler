@@ -1,16 +1,18 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 1 | 2026-10-25 17:14 ET | write layer: swaps + events + trades + withdraw (waiting or let's talk) + edit swap, each audited
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 2 | 2026-10-25 20:38 ET | write layer: swaps (range may include own days) + events + cancel + edit swap, each audited
 
 import { supabase } from '../supabaseClient.js';
 import { logAudit } from './audit.js';
-import { defaultHousehold } from './schedule.js';
-import { allHeldBy } from './pick.js';
+import { borrowedDays } from './schedule.js';
+import { otherHousehold } from './pick.js';
 
 // CREATE SWAP — default_parent is snapshotted from the schedule engine at
 // creation time and never back-rewritten (core invariant).
 export async function createSwap({ date_start, date_end, receiving_parent, status, proposed_by, notes, trade_id = null }, actor) {
-  const default_parent = defaultHousehold(date_start);
-  if (default_parent === receiving_parent) {
-    return { data: null, error: { message: 'That household already has Zoe by default — no swap needed.' } };
+  // default_parent = the household that lends the days. The range may also include days the receiver
+  // already holds, but it must borrow at least one.
+  const default_parent = otherHousehold(receiving_parent);
+  if (borrowedDays(date_start, date_end, receiving_parent) === 0) {
+    return { data: null, error: { message: 'That household already has Zoe on all of those days — no swap needed.' } };
   }
   const { data, error } = await supabase
     .from('swaps')
@@ -77,18 +79,17 @@ export async function updateTradeStatus(rows, status, actor) {
   return { error: null };
 }
 
-// WITHDRAW — the asker removes their own request while it is still open (waiting or "let's talk").
-// Agreed swaps can't be withdrawn. The audit row keeps the full deleted record.
-export async function withdrawSwap(row, actor) {
-  if (row.status === 'agreed') return { error: { message: 'Only requests that are not agreed yet can be withdrawn.' } };
-  const { error } = await supabase.from('swaps').delete().eq('id', row.id).eq('status', row.status);
+// CANCEL — remove a swap (waiting, "let's talk" or agreed); the regular schedule applies again.
+// Anyone can do it; the audit row (action 'delete') keeps the full deleted record and shows in History.
+export async function cancelSwap(row, actor) {
+  const { error } = await supabase.from('swaps').delete().eq('id', row.id);
   if (error) return { error };
   await logAudit({ actor, action: 'delete', entityType: 'swap', entityId: row.id, before: row });
   return { error: null };
 }
 
-// EDIT SWAP — new dates and/or notes. default_parent and receiving_parent never change:
-// the days must still be the default_parent's own days (same rule as creating).
+// EDIT SWAP — new dates and/or notes. default_parent and receiving_parent never change.
+// The range may include the receiver's own days but must still borrow at least one.
 // Changing dates counts as a new ask: status goes back to 'proposed' and the editor becomes
 // proposed_by, so the other household has to agree again. A notes-only edit leaves status alone.
 // The update only matches while status is unchanged since the row was loaded.
@@ -96,8 +97,8 @@ export async function updateSwap(row, { date_start, date_end, notes }, actor) {
   if (!date_start || !date_end || date_end < date_start) {
     return { data: null, error: { message: 'Pick the first and last day.' } };
   }
-  if (!allHeldBy(date_start, date_end, row.default_parent)) {
-    return { data: null, error: { message: 'Every day must be one of the original household\'s own days.' } };
+  if (borrowedDays(date_start, date_end, row.receiving_parent) === 0) {
+    return { data: null, error: { message: 'That household already has Zoe on all of those days.' } };
   }
   const note = (notes ?? '').trim() || null;
   const datesChanged = date_start !== row.date_start || date_end !== row.date_end;

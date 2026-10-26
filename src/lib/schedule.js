@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 4 | Build 1 | 2026-10-24 14:50 ET | schedule engine: default + swap overlay + balance; read-only ruleFor for labels
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 2 | 2026-10-25 20:38 ET | schedule rules; swap balance counts only borrowed days (parity logic unchanged)
 
 // Parse 'YYYY-MM-DD' as UTC (avoids local-timezone day drift on custody dates).
 export function parseDate(input) {
@@ -54,12 +54,23 @@ export function effectiveHousehold(input, swaps = []) {
   return active ? active.receiving_parent : defaultHousehold(input);
 }
 
+// Days in start..end (inclusive) that the receiving household does NOT hold by default.
+// Only these count toward the swap balance and the holiday swap tally: a swap may also
+// cover days the receiving household already has (e.g. a two-week trip, one week borrowed).
+export function borrowedDays(start, end, receiving) {
+  let n = 0;
+  for (let t = parseDate(start).getTime(); t <= parseDate(end).getTime(); t += 86400000) {
+    if (defaultHousehold(new Date(t).toISOString().slice(0, 10)) !== receiving) n += 1;
+  }
+  return n;
+}
+
 // Running balance from AGREED swaps. Positive net = that household is ahead.
 export function swapBalance(swaps = []) {
   let ar = 0, lisa = 0;
   for (const s of swaps) {
     if (s.status !== 'agreed') continue;
-    const days = Math.round((parseDate(s.date_end) - parseDate(s.date_start)) / 86400000) + 1;
+    const days = borrowedDays(s.date_start, s.date_end, s.receiving_parent);
     s.receiving_parent === 'aaron_rebecca' ? (ar += days) : (lisa += days);
   }
   const net = ar - lisa;

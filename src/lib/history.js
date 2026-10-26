@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 1 | 2026-10-25 17:14 ET | history: plain status words (waiting, agreed, let's talk)
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 2 | 2026-10-25 20:38 ET | history: plain-words sentences and field changes (cancelled swaps included)
 
 import { parseDate, householdLabel } from './schedule.js';
 import { categoryLabel } from './labels.js';
@@ -50,7 +50,7 @@ export function describe(row) {
         ? `${who} added the return side of a trade: ${span(rec)}.${hh}`
         : `${who} asked for ${span(rec)}.${hh}`;
     } else if (row.action === 'delete') {
-      text = `${who} withdrew the request for ${span(rec)}.`;
+      text = b && b.status === 'agreed' ? `${who} cancelled the agreed swap for ${span(rec)}.` : `${who} cancelled the request for ${span(rec)}.`;
     } else {
       const parts = [];
       const c = Object.fromEntries(details.map((d) => [d.key, d]));

@@ -1,11 +1,10 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 1 | 2026-10-25 17:14 ET | dashboard (11c simplify): Schedule · Holidays · Swaps · History tabs, Right now + Needs your OK cards, who's-using-this-phone chip
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 2 | 2026-10-25 20:38 ET | dashboard (11c simplify): tabs, Right now + Needs your OK, who's-using-this-phone chip; range may include own days; Cancel swap
 import { useState, useRef } from 'react';
 import { useData } from '../hooks/useData.js';
 import { swapBalance, parseDate } from '../lib/schedule.js';
 import { holidayTally, trackingSince } from '../lib/tally.js';
-import { suggestReturn } from '../lib/suggest.js';
-import { dayOk, rangeProblem } from '../lib/pick.js';
-import { updateStatus, withdrawSwap } from '../lib/mutations.js';
+import { rangeProblem } from '../lib/pick.js';
+import { updateStatus, cancelSwap } from '../lib/mutations.js';
 import { loadActor, saveActor, cap, householdOf, HOUSE_COLORS } from '../lib/people.js';
 import BalanceTile from '../components/BalanceTile.jsx';
 import CalendarView from '../components/CalendarView.jsx';
@@ -26,7 +25,7 @@ export default function Dashboard() {
   const [actor, setActor] = useState(loadActor); // remembered on this phone (localStorage gs.actor)
   const [changingWho, setChangingWho] = useState(false);
   const [view, setView] = useState('schedule'); // 'schedule' | 'holidays' | 'swaps' | 'history'
-  const [pick, setPick] = useState(null); // tap-to-select: { kind: 'ask'|'return'|'edit', original?, start, end, suggested, err }
+  const [pick, setPick] = useState(null); // tap-to-select: { kind: 'ask'|'edit', receiving, original?, start, end, suggested, err }
   const calRef = useRef(null);
   const [jumpTo, setJumpTo] = useState(null); // 'YYYY-MM-DD#n': calendar shows this month after a save
   const saved = (date) => { if (date) setJumpTo(`${date}#${Date.now()}`); refetch(); };
@@ -44,13 +43,8 @@ export default function Dashboard() {
     if (month) setJumpTo(`${month}#${Date.now()}`);
     setTimeout(() => calRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }), 80);
   };
-  const beginEdit = (row) => beginPick({ kind: 'edit', original: row, start: row.date_start, end: row.date_end, suggested: true, err: null }, row.date_start);
-  const beginAsk = (date = null) => beginPick({ kind: 'ask', start: date, end: null, suggested: false, err: null }, date);
-  const beginReturn = (swap) => {
-    const today = new Date().toLocaleDateString('en-CA');
-    const s = suggestReturn(swap, { swaps, events, today });
-    beginPick({ kind: 'return', original: swap, start: s?.date_start ?? null, end: s?.date_end ?? null, suggested: !!s, err: null }, s?.date_start ?? swap.date_start);
-  };
+  const beginEdit = (row) => beginPick({ kind: 'edit', receiving: row.receiving_parent, original: row, start: row.date_start, end: row.date_end, suggested: true, err: null }, row.date_start);
+  const beginAsk = (date = null) => beginPick({ kind: 'ask', receiving: householdOf(actor), start: date, end: null, suggested: false, err: null }, date);
   const tapDay = (d) => setPick((p) => {
     if (!p) return p;
     if (!p.start || p.end || d < p.start) return { ...p, start: d, end: null, suggested: false, err: null };
@@ -60,7 +54,7 @@ export default function Dashboard() {
 
   if (!actor || changingWho) {
     return <WhoPicker current={actor} onCancel={actor ? () => setChangingWho(false) : null}
-      onPick={(a) => { saveActor(a); setActor(a); setChangingWho(false); }} />;
+      onPick={(a) => { saveActor(a); setActor(a); setPick(null); setChangingWho(false); }} />;
   }
   if (loading) return <p style={{ padding: 24 }}>Loading…</p>;
   if (error) return <p style={{ padding: 24, color: '#c00' }}>Error: {error}</p>;
@@ -77,18 +71,18 @@ export default function Dashboard() {
     if (e) window.alert(e.message);
     refetch();
   };
-  const withdraw = async (row) => {
-    if (!window.confirm(`Withdraw this request (${span(row)})? It will be removed.`)) return;
-    const { error: e } = await withdrawSwap(row, actor);
+  const cancel = async (row) => {
+    const what = row.status === 'agreed' ? 'agreed swap' : 'request';
+    if (!window.confirm(`Cancel this ${what} (${span(row)})? The regular schedule applies again. It will show in History.`)) return;
+    const { error: e } = await cancelSwap(row, actor);
     if (e) window.alert(e.message);
     refetch();
   };
   const on = {
     agree: (row) => setStatus(row, 'agreed'),
     talk: (row) => setStatus(row, 'needs_discussion'),
-    withdraw,
+    cancel,
     change: beginEdit,
-    giveBack: beginReturn,
   };
 
   return (
@@ -104,12 +98,12 @@ export default function Dashboard() {
       {view === 'schedule' && (
         <>
           <NowCard swaps={swaps} today={today} />
-          <NeedsOkCard swaps={swaps} actor={actor} today={today} onAgree={on.agree} onTalk={on.talk} />
+          <NeedsOkCard swaps={swaps} actor={actor} today={today} onAgree={on.agree} onTalk={on.talk} onChange={on.change} />
           <div ref={calRef} style={{ scrollMarginTop: 8 }}>
             {pick && <PickPanel key={`${pick.kind}-${pick.original?.id ?? ''}`} pick={pick} setPick={setPick} actor={actor} onCancel={() => setPick(null)}
               onDone={(d) => { setPick(null); saved(d); }} />}
             <CalendarView swaps={swaps} events={events} jumpTo={jumpTo}
-              pick={pick} pickOk={(d) => dayOk(pick, d)} onPickDay={tapDay}
+              pick={pick} onPickDay={tapDay}
               onAskFrom={pick ? null : beginAsk} onEditSwap={pick ? null : beginEdit} />
           </div>
           {!pick && (
