@@ -1,5 +1,5 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 3 | 2026-10-25 21:10 ET | dashboard (11c simplify): tabs, Right now + Needs your OK, who's-using-this-phone chip; range may include own days; Cancel swap
-import { useState, useRef } from 'react';
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 5 | 2026-10-25 21:57 ET | dashboard (11c simplify): tabs, Right now + Needs your OK, who's-using-this-phone chip; range may include own days; Cancel swap
+import { useState, useRef, useEffect } from 'react';
 import { useData } from '../hooks/useData.js';
 import { swapBalance, parseDate } from '../lib/schedule.js';
 import { holidayTally, trackingSince } from '../lib/tally.js';
@@ -21,11 +21,16 @@ import { NowCard, NeedsOkCard } from '../components/NowCard.jsx';
 const nice = (s) => parseDate(s).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
 const span = (r) => (r.date_start === r.date_end ? nice(r.date_start) : `${nice(r.date_start)} – ${nice(r.date_end)}`);
 
+// An email link looks like /?swap=<id>: open the Swaps tab on that swap, then tidy the address bar.
+const readSwapParam = () => { try { return new URLSearchParams(window.location.search).get('swap'); } catch { return null; } };
+
 export default function Dashboard() {
   const { swaps, events, audit, loading, error, refetch } = useData();
   const [actor, setActor] = useState(loadActor); // remembered on this phone (localStorage gs.actor)
   const [changingWho, setChangingWho] = useState(false);
-  const [view, setView] = useState('schedule'); // 'schedule' | 'holidays' | 'swaps' | 'history'
+  const [focusId, setFocusId] = useState(readSwapParam); // swap opened from an email link
+  const [view, setView] = useState(() => (readSwapParam() ? 'swaps' : 'schedule')); // 'schedule' | 'holidays' | 'swaps' | 'history'
+  useEffect(() => { if (focusId) { try { window.history.replaceState(null, '', window.location.pathname); } catch { /* not a browser */ } } }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [pick, setPick] = useState(null); // tap-to-select: { kind: 'ask'|'edit', receiving, original?, start, end, suggested, err }
   const calRef = useRef(null);
   const [jumpTo, setJumpTo] = useState(null); // 'YYYY-MM-DD#n': calendar shows this month after a save
@@ -33,6 +38,7 @@ export default function Dashboard() {
 
   const goTab = (k) => {
     setView(k);
+    setFocusId(null);
     if (k !== 'schedule') setPick(null);
     try { window.scrollTo(0, 0); } catch { /* not a browser */ }
   };
@@ -125,7 +131,7 @@ export default function Dashboard() {
         </>
       )}
 
-      {view === 'swaps' && <SwapsView swaps={swaps} actor={actor} today={today} on={on} onEventSaved={saved} />}
+      {view === 'swaps' && <SwapsView swaps={swaps} actor={actor} today={today} on={on} focusId={focusId} onEventSaved={saved} />}
 
       {view === 'history' && <HistoryView audit={audit} />}
 

@@ -1,5 +1,5 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 3 | 2026-10-25 20:52 ET | Swaps tab: one card per swap; Change and Cancel swap for everyone (logged in History)
-import { useState } from 'react';
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 5 | 2026-10-25 21:57 ET | Swaps tab: one card per swap; Change and Cancel swap for everyone (logged in History)
+import { useState, useRef, useEffect } from 'react';
 import { parseDate, householdLabel, borrowedDays } from '../lib/schedule.js';
 import { dayCount } from '../lib/pick.js';
 import { householdOf, statusText } from '../lib/people.js';
@@ -12,8 +12,10 @@ const btn = { minHeight: 44, padding: '10px 16px', fontSize: 15, borderRadius: 8
 const TONE = { agreed: '#2e7d32', proposed: '#b26a00', needs_discussion: '#c62828' };
 
 // Module scope on purpose: a component declared inside another one remounts on every render.
-function SwapCard({ swap, swaps, actor, past, on }) {
+function SwapCard({ swap, swaps, actor, past, on, focus }) {
   const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => { if (focus) ref.current?.scrollIntoView?.({ block: 'center' }); }, [focus]);
   const mine = householdOf(swap.proposed_by) === householdOf(actor); // my household asked
   const st = swap.status;
   const decide = !past && st !== 'agreed' && !mine; // Agree / Let's talk
@@ -33,7 +35,8 @@ function SwapCard({ swap, swaps, actor, past, on }) {
     </>
   );
   return (
-    <div style={{ padding: 12, marginBottom: 8, border: '1px solid #e3e8ef', borderLeft: `5px solid ${TONE[st] ?? '#889'}`, borderRadius: 8, opacity: past ? 0.6 : 1 }}>
+    <div ref={ref} id={`swap-${swap.id}`} style={{ padding: 12, marginBottom: 8, border: focus ? '2px solid #1565c0' : '1px solid #e3e8ef', borderLeft: `5px solid ${TONE[st] ?? '#889'}`, borderRadius: 8, opacity: past ? 0.6 : 1, background: focus ? '#eef4ff' : undefined }}>
+      {focus && <div style={{ fontSize: 12, fontWeight: 800, color: '#1565c0', marginBottom: 4 }}>FROM YOUR EMAIL</div>}
       <button onClick={() => setOpen(!open)} aria-expanded={open} aria-label={`Options for ${span(swap)}`}
         style={{ display: 'block', width: '100%', textAlign: 'left', padding: 0, border: 0, background: 'transparent', font: 'inherit', cursor: 'pointer', minHeight: 44 }}>{header}</button>
       <div style={{ fontSize: 13, marginTop: 4, color: TONE[st] ?? '#556', fontWeight: 700 }}>{statusText(swap)}</div>
@@ -60,18 +63,21 @@ function SwapCard({ swap, swaps, actor, past, on }) {
   );
 }
 
-export default function SwapsView({ swaps = [], actor, today, on, onEventSaved }) {
+export default function SwapsView({ swaps = [], actor, today, on, onEventSaved, focusId = null }) {
   const [showEvent, setShowEvent] = useState(false);
   const upcoming = swaps.filter((s) => s.date_end >= today).sort((a, b) => a.date_start.localeCompare(b.date_start));
   const past = swaps.filter((s) => s.date_end < today).sort((a, b) => b.date_start.localeCompare(a.date_start));
+  const missing = focusId && !swaps.some((s) => s.id === focusId);
+  const focusPast = !!focusId && past.some((s) => s.id === focusId);
   return (
     <div style={{ marginTop: 16 }}>
+      {missing && <p role="status" style={{ padding: 10, borderRadius: 8, background: '#fff3cd', border: '1px solid #e0b43a', color: '#5c4400', fontSize: 14 }}>That request isn't open any more. It was cancelled or changed. Here are the current swaps; History shows what happened.</p>}
       {upcoming.length === 0 && <p style={{ color: '#778' }}>No swaps coming up. To ask for a schedule change, go to Schedule and tap Ask for schedule change.</p>}
-      {upcoming.map((s) => <SwapCard key={s.id} swap={s} swaps={swaps} actor={actor} past={false} on={on} />)}
+      {upcoming.map((s) => <SwapCard key={s.id} swap={s} swaps={swaps} actor={actor} past={false} on={on} focus={s.id === focusId} />)}
       {past.length > 0 && (
-        <details style={{ marginTop: 12 }}>
+        <details open={focusPast || undefined} style={{ marginTop: 12 }}>
           <summary style={{ fontSize: 14, color: '#556', cursor: 'pointer', minHeight: 44, lineHeight: '44px' }}>Past swaps ({past.length})</summary>
-          {past.map((s) => <SwapCard key={s.id} swap={s} swaps={swaps} actor={actor} past on={on} />)}
+          {past.map((s) => <SwapCard key={s.id} swap={s} swaps={swaps} actor={actor} past on={on} focus={s.id === focusId} />)}
         </details>
       )}
       <div style={{ marginTop: 24 }}>
