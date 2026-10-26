@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 3 | 2026-10-25 20:52 ET | calendar: 4-item legend (red bar back), day sheet without 'week' wording
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 6 | 2026-10-25 22:04 ET | calendar: 4-item legend (red bar back), day sheet without 'week' wording
 import { useState, useEffect } from 'react';
 import { parseDate, effectiveHousehold, householdLabel, isoWeek, defaultHousehold, ruleFor } from '../lib/schedule.js';
 import { isHolidayEvent } from '../lib/conflicts.js';
@@ -14,7 +14,7 @@ const short = (s) => parseDate(s).toLocaleDateString('en-US', { month: 'short', 
 const dayShort = (s) => parseDate(s).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
 const span = (a, b) => (a === b ? dayShort(a) : `${dayShort(a)} – ${dayShort(b)}`);
 
-const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; // custody weeks run Mon–Sun
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']; // grid weeks start on Sunday; custody weeks still run Mon–Sun (handover is on Monday, so it falls mid-row)
 const HOUSE = {
   aaron_rebecca: { bg: '#e8f5e9', edge: '#2e7d32' },
   lisa: { bg: '#f3e5f5', edge: '#7b1fa2' },
@@ -22,11 +22,11 @@ const HOUSE = {
 const CAT = { holiday: '#c62828', school: '#c62828', trip: '#ef6c00', other: '#78909c' };
 const HOLSWAP = '#00897b'; // holiday swaps are normal, so a calm teal instead of a warning color
 
-// Whole weeks (Mon-first) covering the month, PLUS the following week so the
+// Whole weeks (Sunday-first) covering the month, PLUS the following week so the
 // next handover is always visible. Returns { days, monthRows }.
 function monthGrid(y, m) {
   const first = new Date(Date.UTC(y, m, 1));
-  const lead = (first.getUTCDay() + 6) % 7;
+  const lead = first.getUTCDay(); // Sun=0 .. Sat=6
   const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
   const start = addDays(iso(first), -lead);
   const monthRows = Math.ceil((lead + days) / 7);
@@ -44,10 +44,10 @@ function loadYm(key, today) {
 }
 
 // One ribbon segment per swap per day. Ends are rounded at the swap's first/last
-// day and at week edges (the grid wraps each Monday). Solid = agreed, striped = asked/waiting.
+// day and at week edges (the grid wraps each Sunday). Solid = agreed, striped = asked/waiting.
 function Ribbon({ swap, d, index }) {
   const color = HOUSE[swap.receiving_parent]?.edge ?? '#889';
-  const dow = (parseDate(d).getUTCDay() + 6) % 7;
+  const dow = parseDate(d).getUTCDay(); // Sun=0 .. Sat=6
   const startHere = d === swap.date_start || dow === 0;
   const endHere = d === swap.date_end || dow === 6;
   const agreed = swap.status === 'agreed';
@@ -135,11 +135,12 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
           const ring = [outer, holidaySwap ? `inset 0 0 0 3px ${HOLSWAP}` : null].filter(Boolean).join(', ') || 'none';
           const ribbons = [...daySwaps].sort((a, b) => (a.status === 'agreed' ? -1 : 1) - (b.status === 'agreed' ? -1 : 1)).slice(0, 2);
           const monthStart = d.slice(8) === '01' && !inMonth;
+          const mon = addDays(d, 1); // the row's Monday decides its custody week number
           const weekCell = i % 7 === 0 && (
-            <div key={`w${d}`} title={`Week ${isoWeek(d)}: ${householdLabel(defaultHousehold(d))} by default`}
+            <div key={`w${d}`} title={`Week ${isoWeek(mon)}: ${householdLabel(defaultHousehold(mon))} by default (weeks run Mon–Sun)`}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700,
-                color: HOUSE[defaultHousehold(d)]?.edge ?? '#778', opacity: extraWeek ? 0.7 : 1 }}>
-              {isoWeek(d)}
+                color: HOUSE[defaultHousehold(mon)]?.edge ?? '#778', opacity: extraWeek ? 0.7 : 1 }}>
+              {isoWeek(mon)}
             </div>
           );
           const divider = i === monthRows * 7 && (
