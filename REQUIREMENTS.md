@@ -157,7 +157,7 @@ Working rules for Claude Code (file headers, diffs, do-not-touch list) live in `
 **Verified on the live site by Aaron (2026-10-24 to 2026-10-26):**
 - Draft message, keep-alive, full-week swap alternate, Holidays view and seed, holiday-swap tally (details in git history of this file).
 - 11a / calendar declutter, 11b tap-to-select, Change swap and History (iPhone).
-- **Email alert (plain-text version):** an ask by Aaron sent a `[BETA]` email to globalgoldstein@gmail.com with the sentence, field list and site link.
+- **Email alert (plain-text version):** an ask by Aaron sent a `[BETA]` email to Aaron's inbox with the sentence, field list and site link.
 
 **Built, passes 58 automated checks and a production build, pushed, not yet confirmed on the live site by Aaron:**
 - Four-tab layout, who's-using-this-phone picker, Right now and Needs your OK cards, Swaps tab.

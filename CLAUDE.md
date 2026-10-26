@@ -21,6 +21,7 @@ Steering for Claude Code in this repo. **Read `REQUIREMENTS.md` first.** It is t
 - Drafting is read-only: no audit rows.
 - Claude API calls live only in `netlify/functions/`, using `ANTHROPIC_API_KEY` (no `VITE_` prefix, never in browser code).
 - Never commit `.env*` or `dist/`.
+- Never write the value of any Netlify env var (email addresses, keys, passwords) into any file in the repo, docs included. Netlify's secrets scan fails the build if it finds one (this happened 2026-10-26 with an email address in `REQUIREMENTS.md`). Refer to variables by name only.
 
 ## After a verified deploy
 Update `REQUIREMENTS.md` to the new current state (not a changelog), including its `updated` date and header. Record decisions and ideas in the vault hub note `Apps/Goldstein Scheduler.md`, not here.
