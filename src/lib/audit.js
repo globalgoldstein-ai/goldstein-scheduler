@@ -1,8 +1,9 @@
-// Goldstein Scheduler | Phase 6 | Session 1 | Build 1 | 2026-07-03 13:44 ET | audit helper: append-only change log
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 3 | 2026-10-25 21:10 ET | audit helper: append-only change log
 
 import { supabase } from '../supabaseClient.js';
+import { notifyChange } from './notify.js';
 
-// Append one audit row. NEVER throws — returns { data, error } so an audit
+// Append one audit row, then fire the email alert (notify.js). NEVER throws — returns { data, error } so an audit
 // failure can't mask or roll back the primary write it's logging.
 export async function logAudit({ actor, action, entityType, entityId, before = null, after = null }) {
   try {
@@ -14,6 +15,7 @@ export async function logAudit({ actor, action, entityType, entityId, before = n
       before,
       after,
     }).select().single();
+    if (!error) notifyChange(data ?? { actor, action, entity_type: entityType, entity_id: entityId, before, after });
     return { data, error };
   } catch (err) {
     return { data: null, error: err };

@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 3 | 2026-10-25 20:52 ET | dashboard (11c simplify): tabs, Right now + Needs your OK, who's-using-this-phone chip; range may include own days; Cancel swap
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 3 | 2026-10-25 21:10 ET | dashboard (11c simplify): tabs, Right now + Needs your OK, who's-using-this-phone chip; range may include own days; Cancel swap
 import { useState, useRef } from 'react';
 import { useData } from '../hooks/useData.js';
 import { swapBalance, parseDate } from '../lib/schedule.js';
@@ -13,6 +13,7 @@ import HolidaySwapCards from '../components/ConflictCard.jsx';
 import HistoryView from '../components/HistoryView.jsx';
 import PickPanel from '../components/PickControls.jsx';
 import SwapsView from '../components/SwapsView.jsx';
+import BetaBanner from '../components/BetaBanner.jsx';
 import WhoPicker from '../components/WhoPicker.jsx';
 import TabBar from '../components/TabBar.jsx';
 import { NowCard, NeedsOkCard } from '../components/NowCard.jsx';
@@ -87,6 +88,7 @@ export default function Dashboard() {
 
   return (
     <div style={{ padding: '16px 20px 96px', fontFamily: 'system-ui, sans-serif', maxWidth: 720, margin: '0 auto' }}>
+      <BetaBanner />
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <h1 style={{ fontSize: 18, margin: 0 }}>Goldstein Kids Scheduler</h1>
         <button onClick={() => setChangingWho(true)} aria-label={`Using as ${cap(actor)}. Tap to switch.`}
