@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 2 | 2026-10-25 20:38 ET | calendar: 4-item legend (red bar back), day sheet without 'week' wording
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 3 | 2026-10-25 20:52 ET | calendar: 4-item legend (red bar back), day sheet without 'week' wording
 import { useState, useEffect } from 'react';
 import { parseDate, effectiveHousehold, householdLabel, isoWeek, defaultHousehold, ruleFor } from '../lib/schedule.js';
 import { isHolidayEvent } from '../lib/conflicts.js';
@@ -223,7 +223,7 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
           {onAskFrom && (
             <button onClick={() => onAskFrom(sel)}
               style={{ marginTop: 10, padding: '10px 16px', minHeight: 44, fontSize: 14, borderRadius: 8, border: '1px solid #2e7d32', background: '#fff', color: '#2e7d32', fontWeight: 600, cursor: 'pointer' }}>
-              Ask for days starting this day
+              Ask for schedule change starting this day
             </button>
           )}
         </div>

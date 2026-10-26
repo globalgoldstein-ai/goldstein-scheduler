@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 2 | 2026-10-25 20:38 ET | one sticky panel above the calendar: short steps, summary, borrowed-days note, notes, Ask/Save + Cancel
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 3 | 2026-10-25 20:52 ET | one sticky panel above the calendar: short steps, summary, borrowed-days note, notes, Ask/Save + Cancel
 import { useState } from 'react';
 import { createSwap, updateSwap } from '../lib/mutations.js';
 import { householdLabel, parseDate } from '../lib/schedule.js';
@@ -9,7 +9,7 @@ const spanOf = (a, b) => (a === b ? nice(a) : `${nice(a)} – ${nice(b)}`);
 const days = (n) => `${n} day${n === 1 ? '' : 's'}`;
 const box = { width: '100%', padding: 10, fontSize: 16, borderRadius: 8, border: '1px solid #ccd', boxSizing: 'border-box' };
 const btn = { padding: '10px 16px', minHeight: 44, fontSize: 15, borderRadius: 8, fontWeight: 600, cursor: 'pointer' };
-const TITLE = { ask: 'Ask for days', edit: 'Change swap' };
+const TITLE = { ask: 'Ask for schedule change', edit: 'Change swap' };
 
 // Declared at module scope so typing in Notes does not remount the panel.
 // Sits ABOVE the calendar and sticks to the top of the screen, so what a tap did is always visible.

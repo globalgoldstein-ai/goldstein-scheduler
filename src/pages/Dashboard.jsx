@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 2 | 2026-10-25 20:38 ET | dashboard (11c simplify): tabs, Right now + Needs your OK, who's-using-this-phone chip; range may include own days; Cancel swap
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 3 | 2026-10-25 20:52 ET | dashboard (11c simplify): tabs, Right now + Needs your OK, who's-using-this-phone chip; range may include own days; Cancel swap
 import { useState, useRef } from 'react';
 import { useData } from '../hooks/useData.js';
 import { swapBalance, parseDate } from '../lib/schedule.js';
@@ -109,7 +109,7 @@ export default function Dashboard() {
           {!pick && (
             <button onClick={() => beginAsk()}
               style={{ width: '100%', minHeight: 52, marginTop: 16, fontSize: 17, fontWeight: 800, borderRadius: 12, border: 0, background: '#2e7d32', color: '#fff', cursor: 'pointer' }}>
-              Ask for days
+              Ask for schedule change
             </button>
           )}
           <BalanceTile balance={balance} holiday={holiday} since={since} />

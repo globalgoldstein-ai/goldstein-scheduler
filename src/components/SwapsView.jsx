@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 2 | 2026-10-25 20:38 ET | Swaps tab: one card per swap; Change and Cancel swap for everyone (logged in History)
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 3 | 2026-10-25 20:52 ET | Swaps tab: one card per swap; Change and Cancel swap for everyone (logged in History)
 import { useState } from 'react';
 import { parseDate, householdLabel, borrowedDays } from '../lib/schedule.js';
 import { dayCount } from '../lib/pick.js';
@@ -66,7 +66,7 @@ export default function SwapsView({ swaps = [], actor, today, on, onEventSaved }
   const past = swaps.filter((s) => s.date_end < today).sort((a, b) => b.date_start.localeCompare(a.date_start));
   return (
     <div style={{ marginTop: 16 }}>
-      {upcoming.length === 0 && <p style={{ color: '#778' }}>No swaps coming up. To ask for days, go to Schedule and tap Ask for days.</p>}
+      {upcoming.length === 0 && <p style={{ color: '#778' }}>No swaps coming up. To ask for a schedule change, go to Schedule and tap Ask for schedule change.</p>}
       {upcoming.map((s) => <SwapCard key={s.id} swap={s} swaps={swaps} actor={actor} past={false} on={on} />)}
       {past.length > 0 && (
         <details style={{ marginTop: 12 }}>

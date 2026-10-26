@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 1 | 2026-10-25 17:14 ET | holiday swap cards with the optional "Suggest other dates" draft (read-only, no audit rows)
+// Goldstein Scheduler | Phase 11 | Session 6 | Build 3 | 2026-10-25 20:52 ET | holiday swap cards with the optional "Suggest other dates" draft (read-only, no audit rows)
 import { useState } from 'react';
 import { suggestAlternate } from '../lib/suggest.js';
 
@@ -76,6 +76,7 @@ export function ConflictCard({ conflict, sender, swaps, events }) {
 
   return (
     <div style={{ padding: 12, marginBottom: 8, borderRadius: 8, background: '#f1faf9', border: '1px solid #80cbc4', fontSize: 14 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: '#00695c', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 4 }}>Agreed swap during a holiday</div>
       <div>⇄ {conflict.message}</div>
 
       <button
@@ -92,7 +93,7 @@ export function ConflictCard({ conflict, sender, swaps, events }) {
       </button>
       {state === 'idle' && (
         <div style={{ fontSize: 12, color: '#667', marginTop: 4 }}>
-          Optional. Writes a text you can copy and send, offering days outside the break. Nothing changes in the app.
+          Optional. Claude writes a text you can copy and send, offering other days outside the break. Nothing changes in the app.
         </div>
       )}
 
@@ -107,8 +108,9 @@ export function ConflictCard({ conflict, sender, swaps, events }) {
             onClick={copy}
             style={{ marginTop: 8, padding: '4px 10px', fontSize: 12, borderRadius: 6, border: '1px solid #667', background: '#fff', color: '#445', fontWeight: 600 }}
           >
-            {copied ? 'Copied ✓' : 'Copy'}
+            {copied ? 'Copied ✓' : 'Copy text'}
           </button>
+          <div style={{ marginTop: 6, fontSize: 12, color: '#667' }}>This is only a draft. Copy it into your messages. Redraft writes a different version; neither one changes the schedule.</div>
           {errMsg && <div style={{ marginTop: 6, fontSize: 12, color: '#c00' }}>{errMsg}</div>}
         </div>
       )}
