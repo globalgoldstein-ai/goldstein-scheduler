@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Goldstein Scheduler favicon: two households (green / purple), a Z for Zoe, and a gold N badge for Noah (college age) -->
+  <defs><clipPath id="r"><rect width="64" height="64" rx="14"/></clipPath></defs>
+  <g clip-path="url(#r)">
+    <rect width="64" height="64" fill="#2e7d32"/>
+    <polygon points="64,0 64,64 0,64" fill="#7b1fa2"/>
+  </g>
+  <path d="M14 25 H42 V31.5 L25 45 H42 V51 H14 V44.5 L31 31 H14 Z" fill="#ffffff"/>
+  <circle cx="49" cy="15" r="10.5" fill="#f5b800" stroke="#ffffff" stroke-width="2"/>
+  <path d="M44.2 20.2 V9.8 H47.2 L51.8 16.2 V9.8 H54.4 V20.2 H51.4 L46.8 13.8 V20.2 Z" fill="#7a0019"/>
+</svg>
