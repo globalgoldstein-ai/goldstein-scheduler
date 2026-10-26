@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 2 | 2026-10-25 20:38 ET | history: plain-words sentences and field changes (cancelled swaps included)
+// Goldstein Scheduler | Phase 11 | Session 7 | Build 1 | 2026-10-26 08:53 ET | history: plain-words sentences and field changes (cancelled swaps included)
 
 import { parseDate, householdLabel } from './schedule.js';
 import { categoryLabel } from './labels.js';
@@ -13,7 +13,7 @@ export const FIELD_LABEL = {
   category: 'Type', institution: 'School', receiving_parent: 'Gets Zoe', default_parent: 'Normally has Zoe',
   proposed_by: 'Asked by', trade_id: 'Trade link',
 };
-const SKIP = new Set(['id', 'created_at', 'updated_at']);
+const SKIP = new Set(['id', 'created_at', 'updated_at', 'restored']);
 
 const show = (k, v) => {
   if (v == null || v === '') return 'empty';
@@ -46,7 +46,9 @@ export function describe(row) {
   if (row.entity_type === 'swap') {
     const hh = rec.receiving_parent ? ` ${householdLabel(rec.receiving_parent)} would have Zoe.` : '';
     if (row.action === 'create') {
-      text = rec.trade_id
+      text = rec.restored
+        ? `${who} undid the cancel and restored the swap for ${span(rec)}.`
+        : rec.trade_id
         ? `${who} added the return side of a trade: ${span(rec)}.${hh}`
         : `${who} asked for ${span(rec)}.${hh}`;
     } else if (row.action === 'delete') {

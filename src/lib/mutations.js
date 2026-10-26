@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 2 | 2026-10-25 20:38 ET | write layer: swaps (range may include own days) + events + cancel + edit swap, each audited
+// Goldstein Scheduler | Phase 11 | Session 7 | Build 1 | 2026-10-26 08:53 ET | write layer: swaps (range may include own days) + events + cancel + edit swap, each audited
 
 import { supabase } from '../supabaseClient.js';
 import { logAudit } from './audit.js';
@@ -86,6 +86,14 @@ export async function cancelSwap(row, actor) {
   if (error) return { error };
   await logAudit({ actor, action: 'delete', entityType: 'swap', entityId: row.id, before: row });
   return { error: null };
+}
+
+// RESTORE — undo a cancel: put the exact deleted row back (same id and fields) and log it as a create marked restored.
+export async function restoreSwap(row, actor) {
+  const { data, error } = await supabase.from('swaps').insert(row).select().single();
+  if (error) return { data: null, error };
+  await logAudit({ actor, action: 'create', entityType: 'swap', entityId: data.id, after: { ...data, restored: true } });
+  return { data, error: null };
 }
 
 // EDIT SWAP — new dates and/or notes. default_parent and receiving_parent never change.

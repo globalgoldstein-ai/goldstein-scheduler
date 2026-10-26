@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 6 | 2026-10-25 21:59 ET | email alert after every logged change: headline, facts, who must respond (fire and forget, never blocks a save)
+// Goldstein Scheduler | Phase 11 | Session 7 | Build 1 | 2026-10-26 08:53 ET | email alert after every logged change: headline, facts, who must respond (fire and forget, never blocks a save)
 import { describe } from './history.js';
 import { parseDate, householdLabel } from './schedule.js';
 import { householdOf, otherHousehold } from './people.js';
@@ -28,7 +28,8 @@ export function buildAlert(row) {
   const datesChanged = !!(b && a && (b.date_start !== a.date_start || b.date_end !== a.date_end));
   const s = short(rec);
   let headline; let subject; let needs = null;
-  if (row.action === 'create') { headline = `${who} is asking for ${when}`; subject = `${who} asks for ${s}`; needs = a.status === 'proposed' ? otherHousehold(householdOf(row.actor)) : null; }
+  if (row.action === 'create' && a?.restored) { headline = `${who} undid the cancel: the swap for ${when} is back`; subject = `${who} restored ${s}`; needs = a.status === 'proposed' ? otherHousehold(householdOf(row.actor)) : null; }
+  else if (row.action === 'create') { headline = `${who} is asking for ${when}`; subject = `${who} asks for ${s}`; needs = a.status === 'proposed' ? otherHousehold(householdOf(row.actor)) : null; }
   else if (row.action === 'delete') { headline = `${who} cancelled ${b?.status === 'agreed' ? 'the agreed swap' : 'the request'} for ${when}`; subject = `${who} cancelled ${s}`; }
   else if (a?.status === 'agreed' && b?.status !== 'agreed') { headline = `${who} agreed to ${when}`; subject = `${who} agreed to ${s}`; }
   else if (a?.status === 'needs_discussion' && b?.status !== 'needs_discussion') { headline = `${who} wants to talk about ${when}`; subject = `${who} wants to talk about ${s}`; needs = householdOf(a.proposed_by); }

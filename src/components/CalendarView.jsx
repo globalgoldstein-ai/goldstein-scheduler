@@ -1,8 +1,8 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 6 | 2026-10-25 22:04 ET | calendar: 4-item legend (red bar back), day sheet without 'week' wording
+// Goldstein Scheduler | Phase 11 | Session 7 | Build 1 | 2026-10-26 08:53 ET | calendar: neutral swap ribbons with words, school-coloured day-off bars with labels, Monday handover marks
 import { useState, useEffect } from 'react';
 import { parseDate, effectiveHousehold, householdLabel, isoWeek, defaultHousehold, ruleFor } from '../lib/schedule.js';
 import { isHolidayEvent } from '../lib/conflicts.js';
-import { categoryLabel } from '../lib/labels.js';
+import { categoryLabel, dayOffColor, dayOffLabel, dayOffKind, INSTITUTIONS } from '../lib/labels.js';
 import { statusText } from '../lib/people.js';
 
 const iso = (d) => d.toISOString().slice(0, 10);
@@ -20,6 +20,7 @@ const HOUSE = {
   lisa: { bg: '#f3e5f5', edge: '#7b1fa2' },
 };
 const CAT = { holiday: '#c62828', school: '#c62828', trip: '#ef6c00', other: '#78909c' };
+const SWAP_INK = '#37474f'; // every swap ribbon is this slate so it shows on both green and purple squares
 const HOLSWAP = '#00897b'; // holiday swaps are normal, so a calm teal instead of a warning color
 
 // Whole weeks (Sunday-first) covering the month, PLUS the following week so the
@@ -46,20 +47,20 @@ function loadYm(key, today) {
 // One ribbon segment per swap per day. Ends are rounded at the swap's first/last
 // day and at week edges (the grid wraps each Sunday). Solid = agreed, striped = asked/waiting.
 function Ribbon({ swap, d, index }) {
-  const color = HOUSE[swap.receiving_parent]?.edge ?? '#889';
   const dow = parseDate(d).getUTCDay(); // Sun=0 .. Sat=6
   const startHere = d === swap.date_start || dow === 0;
   const endHere = d === swap.date_end || dow === 6;
   const agreed = swap.status === 'agreed';
   return (
-    <span style={{
-      position: 'absolute', zIndex: 1, bottom: 5 + index * 13, height: 10, boxSizing: 'border-box',
-      left: startHere ? 3 : -3, right: endHere ? 3 : -3,
+    <span aria-hidden="true" style={{
+      position: 'absolute', zIndex: 1, bottom: 4 + index * 16, height: 13, boxSizing: 'border-box',
+      left: startHere ? 3 : -3, right: endHere ? 3 : -3, overflow: 'hidden',
       borderRadius: `${startHere ? 4 : 0}px ${endHere ? 4 : 0}px ${endHere ? 4 : 0}px ${startHere ? 4 : 0}px`,
-      background: agreed ? color : `repeating-linear-gradient(135deg, ${color} 0 3px, transparent 3px 6px)`,
-      borderStyle: 'solid', borderColor: color,
+      background: agreed ? SWAP_INK : 'repeating-linear-gradient(135deg, #cfd8dc 0 3px, #ffffff 3px 6px)',
+      borderStyle: 'solid', borderColor: SWAP_INK,
       borderWidth: agreed ? 0 : `1px ${endHere ? 1 : 0}px 1px ${startHere ? 1 : 0}px`,
-    }} />
+      color: agreed ? '#fff' : SWAP_INK, fontSize: 8.5, fontWeight: 800, lineHeight: '11px', paddingLeft: 2, letterSpacing: -0.2, whiteSpace: 'nowrap', textAlign: 'left',
+    }}>{startHere ? (agreed ? 'Swap ✓' : 'Asked') : ''}</span>
   );
 }
 
@@ -98,8 +99,17 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
     const agreedSwap = daySwaps.some((s) => s.status === 'agreed');
     // Only a day the receiver BORROWS counts as a holiday swap (a swap may also cover the receiver's own days).
     const borrowedAgreed = daySwaps.some((s) => s.status === 'agreed' && defaultHousehold(d) !== s.receiving_parent);
+    // Day-off bars: gold = DCPS (Zoe), maroon = UMN (Noah), red = family. A word on the first day of each break
+    // and on the first day of each new row it wraps into.
+    const offs = dayEvents.filter((e) => e.category === 'holiday' || e.category === 'school');
+    const dcps = offs.filter((e) => dayOffKind(e) === 'dcps');
+    const umn = offs.filter((e) => dayOffKind(e) === 'umn');
+    const fam = offs.filter((e) => dayOffKind(e) === 'family');
+    const bars = [dcps[0], fam[0], umn[0]].filter(Boolean);
+    const starts = (e) => d === e.date_start || parseDate(d).getUTCDay() === 0;
+    const labelEvent = [...dcps, ...fam, ...umn].find(starts) ?? null;
     return {
-      dayEvents, daySwaps, agreedSwap,
+      dayEvents, daySwaps, agreedSwap, bars, offs, labelEvent,
       holder: effectiveHousehold(d, swaps),
       holidaySwap: borrowedAgreed && dayEvents.some(isHolidayEvent),
     };
@@ -126,7 +136,9 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
           <div key={n} style={{ textAlign: 'center', fontSize: 11, color: '#778', padding: '2px 0' }}>{n}</div>
         ))}
         {days.map((d, i) => {
-          const { dayEvents, daySwaps, agreedSwap, holder, holidaySwap } = info(d);
+          const { dayEvents, daySwaps, agreedSwap, holder, holidaySwap, bars, offs, labelEvent } = info(d);
+          const isMonday = parseDate(d).getUTCDay() === 1;
+          const incoming = HOUSE[defaultHousehold(d)];
           const inMonth = Number(d.slice(5, 7)) - 1 === ym.m;
           const extraWeek = i >= monthRows * 7;
           const canTap = !picking || (pickOk ? pickOk(d) : true);
@@ -151,10 +163,10 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
               key={d}
               onClick={() => (picking ? onPickDay?.(d) : setSel(sel === d ? null : d))}
               disabled={!canTap}
-              aria-label={`${fmt(d)}, with ${householdLabel(holder)}${agreedSwap ? ', swap' : ''}${holidaySwap ? ', holiday swap' : ''}${picked ? ', selected' : ''}`}
+              aria-label={`${fmt(d)}, with ${householdLabel(holder)}${offs.length ? `, day off: ${offs.map((e) => e.title).join(', ')}` : ''}${isMonday ? ', handover' : ''}${agreedSwap ? ', swap' : ''}${holidaySwap ? ', holiday swap' : ''}${picked ? ', selected' : ''}`}
               aria-pressed={picking ? !!picked : d === sel}
               style={{
-                position: 'relative', minHeight: 66, padding: '8px 2px 4px', overflow: 'hidden', borderRadius: 6, boxSizing: 'border-box',
+                position: 'relative', minHeight: 78, padding: '8px 2px 4px', overflow: 'hidden', borderRadius: 6, boxSizing: 'border-box',
                 background: HOUSE[holder]?.bg ?? '#eef2f7',
                 border: '1px solid #e3e8ef',
                 boxShadow: ring, opacity: !canTap ? 0.2 : inMonth ? 1 : extraWeek ? 0.7 : 0.4, color: '#223', font: 'inherit',
@@ -164,8 +176,19 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
               <div style={{ fontSize: monthStart ? 11 : 14, fontWeight: d === today ? 800 : 500, whiteSpace: 'nowrap' }}>
                 {monthStart ? short(d) : Number(d.slice(8))}
               </div>
-              {dayEvents.some((e) => e.category === 'holiday' || e.category === 'school') && (
-                <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: CAT.holiday }} />
+              {bars.map((e, k) => (
+                <span key={e.id} aria-hidden="true" style={{ position: 'absolute', top: k * 3, left: 0, right: 0, height: bars.length > 1 ? 3 : 4, background: dayOffColor(e) }} />
+              ))}
+              {isMonday && (
+                <>
+                  <span aria-hidden="true" style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 3, background: incoming?.edge ?? '#889' }} />
+                  <span role="img" aria-label="handover" title="Handover: a new week starts today" style={{ position: 'absolute', top: 7, right: 3, fontSize: 10, lineHeight: 1, color: incoming?.edge ?? '#889', fontWeight: 800 }}>⇆</span>
+                </>
+              )}
+              {labelEvent && (
+                <div aria-hidden="true" style={{ fontSize: 8, fontWeight: 800, lineHeight: '9px', marginTop: 1, color: INSTITUTIONS[labelEvent.institution]?.fg ?? '#b71c1c', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'clip' }}>
+                  {dayOffLabel(labelEvent)}
+                </div>
               )}
               <div style={{ display: 'flex', gap: 3, justifyContent: 'center', alignItems: 'center', marginTop: 2, minHeight: 14 }}>
                 {dayEvents.some((e) => e.category === 'trip') && <span aria-hidden="true" style={{ fontSize: 12, lineHeight: 1 }}>✈</span>}
@@ -192,8 +215,11 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
         {Object.entries(HOUSE).map(([k, v]) => (
           <span key={k}><span style={{ display: 'inline-block', width: 10, height: 10, background: v.bg, border: `1px solid ${v.edge}`, borderRadius: 2, marginRight: 4 }} />{householdLabel(k)}: <strong style={{ color: v.edge }}>{weeksOf(k)}</strong></span>
         ))}
-        <span><span style={{ display: 'inline-block', width: 18, height: 8, background: 'repeating-linear-gradient(135deg, #556 0 3px, transparent 3px 6px)', border: '1px solid #556', boxSizing: 'border-box', borderRadius: 3, marginRight: 4, verticalAlign: 'middle' }} />striped = waiting · <span style={{ display: 'inline-block', width: 18, height: 8, background: '#556', borderRadius: 3, margin: '0 4px', verticalAlign: 'middle' }} />solid = agreed</span>
-        <span><span style={{ display: 'inline-block', width: 18, height: 4, background: CAT.holiday, marginRight: 4, verticalAlign: 'middle' }} />holiday or no school (tap the day)</span>
+        <span><span style={{ display: 'inline-block', width: 22, height: 10, background: SWAP_INK, borderRadius: 3, marginRight: 4, verticalAlign: 'middle' }} /><b>Swap ✓</b> = agreed · <span style={{ display: 'inline-block', width: 22, height: 10, background: 'repeating-linear-gradient(135deg, #cfd8dc 0 3px, #fff 3px 6px)', border: `1px solid ${SWAP_INK}`, boxSizing: 'border-box', borderRadius: 3, margin: '0 4px', verticalAlign: 'middle' }} /><b>Asked</b> = waiting for an answer</span>
+        <span><span style={{ display: 'inline-block', width: 14, height: 4, background: INSTITUTIONS.DCPS.edge, marginRight: 4, verticalAlign: 'middle' }} />gold = Zoe off school (DCPS)</span>
+        <span><span style={{ display: 'inline-block', width: 14, height: 4, background: INSTITUTIONS.UMN.edge, marginRight: 4, verticalAlign: 'middle' }} />maroon = Noah off (UMN)</span>
+        <span><span style={{ display: 'inline-block', width: 14, height: 4, background: CAT.holiday, marginRight: 4, verticalAlign: 'middle' }} />red = family holiday</span>
+        <span><span style={{ display: 'inline-block', width: 3, height: 12, background: '#556', marginRight: 5, verticalAlign: 'middle' }} />⇆ handover (Mondays)</span>
       </div>
 
       {sel && sInfo && (
@@ -217,14 +243,14 @@ export default function CalendarView({ swaps = [], events = [], label = 'Calenda
               {e.title} ({categoryLabel(e.category)}{e.institution ? `, ${e.institution}` : ''}{e.kid === 'zoe' ? '' : `, ${e.kid}`}), {short(e.date_start)}–{short(e.date_end)}
             </div>
           ))}
-          {sInfo.dayEvents.some((e) => e.category === 'holiday' || e.category === 'school') && <div style={{ marginTop: 6, color: '#889', fontSize: 12 }}>The red bar on a day means holiday or no school.</div>}
+          {sInfo.dayEvents.some((e) => e.category === 'holiday' || e.category === 'school') && <div style={{ marginTop: 6, color: '#889', fontSize: 12 }}>The coloured bar on a day means a day off: gold is Zoe's school (DCPS), maroon is Noah's college (UMN), red is a family holiday.</div>}
           {sInfo.dayEvents.some((e) => e.category === 'trip') && <div style={{ marginTop: 6, color: '#889', fontSize: 12 }}>✈ marks a trip.</div>}
           {sInfo.holidaySwap && <div style={{ marginTop: 6, color: HOLSWAP, fontSize: 13 }}>This swap falls on a holiday or no-school day. That's allowed; it's counted in the Holiday swaps total.</div>}
           {!sInfo.daySwaps.length && !sInfo.dayEvents.length && <div style={{ fontSize: 13, color: '#889', marginTop: 4 }}>Nothing else scheduled.</div>}
           {onAskFrom && (
             <button onClick={() => onAskFrom(sel)}
               style={{ marginTop: 10, padding: '10px 16px', minHeight: 44, fontSize: 14, borderRadius: 8, border: '1px solid #2e7d32', background: '#fff', color: '#2e7d32', fontWeight: 600, cursor: 'pointer' }}>
-              Ask for schedule change starting this day
+              Ask for a swap starting this day
             </button>
           )}
         </div>

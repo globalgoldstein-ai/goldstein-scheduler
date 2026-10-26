@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 5 | 2026-10-25 21:57 ET | Swaps tab: one card per swap; Change and Cancel swap for everyone (logged in History)
+// Goldstein Scheduler | Phase 11 | Session 7 | Build 1 | 2026-10-26 08:53 ET | Swaps tab: one card per swap; Change and Cancel swap for everyone (logged in History)
 import { useState, useRef, useEffect } from 'react';
 import { parseDate, householdLabel, borrowedDays } from '../lib/schedule.js';
 import { dayCount } from '../lib/pick.js';
@@ -72,7 +72,7 @@ export default function SwapsView({ swaps = [], actor, today, on, onEventSaved, 
   return (
     <div style={{ marginTop: 16 }}>
       {missing && <p role="status" style={{ padding: 10, borderRadius: 8, background: '#fff3cd', border: '1px solid #e0b43a', color: '#5c4400', fontSize: 14 }}>That request isn't open any more. It was cancelled or changed. Here are the current swaps; History shows what happened.</p>}
-      {upcoming.length === 0 && <p style={{ color: '#778' }}>No swaps coming up. To ask for a schedule change, go to Schedule and tap Ask for schedule change.</p>}
+      {upcoming.length === 0 && <p style={{ color: '#778' }}>No swaps coming up. To ask for a swap, go to Schedule and tap Ask for a swap.</p>}
       {upcoming.map((s) => <SwapCard key={s.id} swap={s} swaps={swaps} actor={actor} past={false} on={on} focus={s.id === focusId} />)}
       {past.length > 0 && (
         <details open={focusPast || undefined} style={{ marginTop: 12 }}>

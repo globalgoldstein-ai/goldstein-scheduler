@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 6 | Build 1 | 2026-10-25 17:14 ET | balance: one line, tap to open the two panels with their explanations
+// Goldstein Scheduler | Phase 11 | Session 7 | Build 1 | 2026-10-26 08:53 ET | balance: one line, tap to open the two panels with their explanations
 import { useState } from 'react';
 import { parseDate } from '../lib/schedule.js';
 
@@ -29,7 +29,7 @@ export default function BalanceTile({ balance, holiday, since }) {
     <div style={{ marginTop: 12 }}>
       <button onClick={() => setOpen(!open)} aria-expanded={open}
         style={{ width: '100%', minHeight: 44, padding: '8px 12px', textAlign: 'left', fontSize: 13, color: '#445', background: '#f5f7fa', border: '1px solid #d7dee8', borderRadius: 10, cursor: 'pointer' }}>
-        Swap balance: <strong>{balance.label}</strong> · Holiday swaps: <strong>{holiday.label}</strong> <span aria-hidden="true">{open ? '▴' : '▾'}</span>
+        Days borrowed: <strong>{balance.label}</strong> · Holiday swaps: <strong>{holiday.label}</strong> <span aria-hidden="true">{open ? '▴' : '▾'}</span>
       </button>
       {open && <Details balance={balance} holiday={holiday} s={s} />}
     </div>
@@ -40,7 +40,7 @@ function Details({ balance, holiday, s }) {
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
       <Panel
-        title="Swap balance (days)"
+        title="Days borrowed"
         value={balance.label}
         explain="Extra days each household has had Zoe because of agreed swaps."
         even={balance.net === 0}
