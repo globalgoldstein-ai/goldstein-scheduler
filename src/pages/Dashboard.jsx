@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 7 | Build 1 | 2026-10-26 08:53 ET | dashboard (11c simplify): tabs, Right now + Needs your OK, who's-using-this-phone chip; range may include own days; Cancel swap
+// Goldstein Scheduler | Phase 11 | Session 8 | Build 1 | 2026-11-15 17:15 ET | dashboard (11c simplify): tabs, Right now + Needs your OK, who's-using-this-phone chip; toast mentions trip event
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useData } from '../hooks/useData.js';
 import { swapBalance, parseDate, householdLabel } from '../lib/schedule.js';
@@ -138,7 +138,7 @@ export default function Dashboard() {
               onDone={(d, r) => {
                 setPick(null); saved(d);
                 const other = householdLabel(otherHousehold(householdOf(actor)));
-                setToast({ text: beta(r?.kind === 'edit' ? (r.datesChanged ? `Changed. ${other} needs to agree again.` : 'Saved.') : `Sent. ${other} will get an email.`) });
+                setToast({ text: beta(r?.kind === 'edit' ? (r.datesChanged ? `Changed. ${other} needs to agree again.` : 'Saved.') : `Sent. ${other} will get an email.${r?.trip === 'added' ? ' Trip added.' : r?.trip === 'failed' ? ' The swap is saved, but the trip event did not save. Add it from the Swaps tab.' : ''}`) });
               }} />}
             <CalendarView swaps={swaps} events={events} jumpTo={jumpTo}
               pick={pick} onPickDay={tapDay}

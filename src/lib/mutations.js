@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 7 | Build 1 | 2026-10-26 08:53 ET | write layer: swaps (range may include own days) + events + cancel + edit swap, each audited
+// Goldstein Scheduler | Phase 11 | Session 8 | Build 1 | 2026-11-15 17:15 ET | write layer: swaps (range may include own days) + events + cancel + edit swap, each audited
 
 import { supabase } from '../supabaseClient.js';
 import { logAudit } from './audit.js';
@@ -46,26 +46,6 @@ export async function updateStatus(table, row, status, actor) {
     entityType: table === 'swaps' ? 'swap' : 'event',
     entityId: row.id, before: row, after: data,
   });
-  return { data, error: null };
-}
-
-// TRADE — add the other side of an existing swap. The new swap goes BACK to the
-// household that gave days up (original.default_parent); createSwap re-checks
-// that this household does not already hold those days by default. Both sides
-// share one trade_id. Linking the original is audited like any other edit.
-export async function createTrade(original, { date_start, date_end, notes }, actor) {
-  const trade_id = original.trade_id ?? crypto.randomUUID();
-  const { data, error } = await createSwap(
-    { date_start, date_end, receiving_parent: original.default_parent, status: 'proposed', proposed_by: actor, notes, trade_id },
-    actor
-  );
-  if (error) return { data: null, error };
-  if (!original.trade_id) {
-    const { data: linked, error: linkErr } = await supabase
-      .from('swaps').update({ trade_id }).eq('id', original.id).select().single();
-    if (linkErr) return { data, error: { message: `Return swap saved but linking failed: ${linkErr.message}` } };
-    await logAudit({ actor, action: 'edit', entityType: 'swap', entityId: original.id, before: original, after: linked });
-  }
   return { data, error: null };
 }
 
