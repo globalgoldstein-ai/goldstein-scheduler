@@ -1,6 +1,6 @@
-// Goldstein Scheduler | Phase 11 | Session 7 | Build 1 | 2026-10-26 08:53 ET | one sticky panel above the calendar: short steps, summary, borrowed-days note, notes, Ask/Save + Cancel
+// Goldstein Scheduler | Phase 11 | Session 8 | Build 1 | 2026-11-15 17:15 ET | one sticky panel above the calendar: short steps, summary, borrowed-days note, notes, optional trip event, Ask/Save + Cancel
 import { useState } from 'react';
-import { createSwap, updateSwap } from '../lib/mutations.js';
+import { createEvent, createSwap, updateSwap } from '../lib/mutations.js';
 import { householdLabel, parseDate } from '../lib/schedule.js';
 import { borrowedIn, dayCount, otherHousehold, rangeProblem, receivingFor } from '../lib/pick.js';
 
@@ -16,6 +16,8 @@ const TITLE = { ask: 'Ask for a swap', edit: 'Change swap' };
 export default function PickPanel({ pick, setPick, actor, onCancel, onDone }) {
   const [notes, setNotes] = useState(pick.kind === 'edit' ? (pick.original.notes ?? '') : '');
   const [busy, setBusy] = useState(false);
+  const [trip, setTrip] = useState(false);
+  const [tripTitle, setTripTitle] = useState('');
   const done = !!(pick.start && pick.end);
   const recv = receivingFor(pick);
   const ask = pick.kind === 'ask';
@@ -43,12 +45,20 @@ export default function PickPanel({ pick, setPick, actor, onCancel, onDone }) {
     if (bad) return setPick({ ...pick, err: bad });
     setBusy(true);
     const dates = { date_start: pick.start, date_end: pick.end, notes };
+    const wantTrip = ask && trip;
+    if (wantTrip && !tripTitle.trim()) return setPick({ ...pick, err: 'Give the trip a name, or untick the trip box.' });
     const { error } = edit
       ? await updateSwap(pick.original, dates, actor)
       : await createSwap({ ...dates, receiving_parent: recv, status: 'proposed', proposed_by: actor }, actor);
     setBusy(false);
     if (error) return setPick({ ...pick, err: error.message });
-    onDone(pick.start, { kind: pick.kind, datesChanged: edit ? datesChanged : true });
+    // The swap is already saved; a trip-event problem is reported but never undoes it.
+    let tripResult = null;
+    if (wantTrip) {
+      const ev = await createEvent({ title: tripTitle.trim(), kid: 'zoe', category: 'trip', date_start: pick.start, date_end: pick.end, status: 'proposed', notes: notes || null }, actor);
+      tripResult = ev.error ? 'failed' : 'added';
+    }
+    onDone(pick.start, { kind: pick.kind, datesChanged: edit ? datesChanged : true, trip: tripResult });
   }
 
   const blocked = !done || busy || nothing;
@@ -76,6 +86,15 @@ export default function PickPanel({ pick, setPick, actor, onCancel, onDone }) {
             </div>
           )}
           <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} style={box} />
+          {ask && (
+            <div style={{ marginTop: 8 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, fontSize: 14, cursor: 'pointer' }}>
+                <input type="checkbox" checked={trip} onChange={(e) => setTrip(e.target.checked)} style={{ width: 20, height: 20 }} />
+                Also add as a trip event (same dates)
+              </label>
+              {trip && <input placeholder="Trip name, e.g. Grandma's visit" value={tripTitle} onChange={(e) => setTripTitle(e.target.value)} style={box} />}
+            </div>
+          )}
         </div>
       )}
 

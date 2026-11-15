@@ -1,4 +1,4 @@
-// Goldstein Scheduler | Phase 11 | Session 7 | Build 1 | 2026-10-26 08:53 ET | email alert after every logged change: headline, facts, who must respond (fire and forget, never blocks a save)
+// Goldstein Scheduler | Phase 11 | Session 8 | Build 1 | 2026-11-15 17:15 ET | email alert after every logged change: headline, facts, who must respond; new items list facts, not empty → value (fire and forget, never blocks a save)
 import { describe } from './history.js';
 import { parseDate, householdLabel } from './schedule.js';
 import { householdOf, otherHousehold } from './people.js';
@@ -20,7 +20,11 @@ export function buildAlert(row) {
   const who = cap(row.actor);
   const base = { actor: row.actor, headline: text, subject: text, facts: [], lines: [], swapId: null, needs: null };
   if (row.entity_type !== 'swap') {
-    return { ...base, lines: (details ?? []).filter((d) => d.key !== 'trade_id').map((d) => `${d.field}: ${d.before ?? 'empty'} → ${d.after ?? 'empty'}`) };
+    const shown = (details ?? []).filter((d) => d.key !== 'trade_id');
+    // New items: list what was entered as plain facts (no "empty → value"). Edits keep "before → after".
+    if (row.action === 'create') return { ...base, facts: shown.filter((d) => d.after != null && d.after !== '').map((d) => [d.field, String(d.after)]) };
+    if (row.action === 'delete') return base;
+    return { ...base, lines: shown.map((d) => `${d.field}: ${d.before ?? 'empty'} → ${d.after ?? 'empty'}`) };
   }
 
   const b = row.before; const a = row.after;
